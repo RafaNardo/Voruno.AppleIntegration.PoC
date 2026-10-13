@@ -136,9 +136,9 @@ final class WorkoutSchedulingService {
       return ["code": "capacity-reached"]
     }
     let calendar = Calendar.autoupdatingCurrent
-    let proposed = Date().addingTimeInterval(5 * 60)
+    let proposed = Date().addingTimeInterval(2) // 2 seconds in the future to avoid scheduling in the past.
     var components = calendar.dateComponents(in: .autoupdatingCurrent, from: proposed)
-    components.second = 0
+    // Preserve seconds: minute truncation can put a short-delay test in the past.
     components.nanosecond = 0
     guard let date = calendar.date(from: components), date > Date() else { return ["code": "invalid-date"] }
     // Nonthrowing async Void API. Returning does NOT prove Watch receipt.

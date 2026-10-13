@@ -9,7 +9,7 @@ The fixed workout is **PoC-only demo input**, never represented as an actual rec
 | JS Fast Refresh on phone | A small text change updates on physical iPhone | owner reports working; not independently observed |
 | Native Swift rebuild | New EAS binary includes changed native module | pending |
 | WorkoutKit supported? | OS/device capability and Apple framework response | pending |
-| Schedule intervals | Native call returns observed result; visual check on Watch | pending |
+| Schedule intervals | Native call returns observed result; visual check on Watch | owner reports five-minute and two-second scheduling working; exact steps/read-back/build fields pending |
 | Incorrect/unsupported workout | Typed failure, not success | pending |
 | Schedule while Watch offline | State distinction: accepted vs visible/unknown | pending |
 | Duplicate scheduling | Defined behavior; no silent duplicate claimed | pending |
@@ -49,7 +49,7 @@ The original M0 tests exercise the unimplemented HealthKit adapter and diagnosti
 
 Owner acceptance: follow the [M0 owner checklist](setup-windows-ios.md#m0-owner-checklist). Do not change physical tests to pass based on automated checks. No M1 implementation is authorized until installation, Metro connectivity and Fast Refresh are confirmed on the physical iPhone.
 
-M0 entry gate was accepted from the owner's report of iPhone iOS 26.6.1 and working development mode/refresh. Remaining environment fields must still be captured. For M1 use the [physical checklist](m1-workoutkit.md#owner-build-and-physical-acceptance), including duplicate scheduling, restart, offline Watch and targeted removal. No M1 native test has passed yet.
+M0 entry gate was accepted from the owner's report of iPhone iOS 26.6.1 and working development mode/refresh. Owner subsequently reported M1 scheduling working on Watch, including a two-second delay; unscheduled preview export was not visible. Remaining environment fields and exact steps must still be captured. For M1 use the [physical checklist](m1-workoutkit.md#owner-build-and-physical-acceptance), including the new app icon, duplicate scheduling, restart, offline Watch and targeted removal. These remaining cases are not marked passed.
 
 ## Evidence template
 - Date / commit:

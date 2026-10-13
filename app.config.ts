@@ -8,6 +8,7 @@ const config: ExpoConfig = {
   owner: 'rafanardo',
   slug: 'voruno-apple-integration-poc',
   version: '0.1.0',
+  icon: './assets/icon.png',
   scheme: 'voruno-apple-poc',
   platforms: ['ios'],
   orientation: 'portrait',

@@ -13,7 +13,6 @@ export default function ExperimentScreen() {
   const [result, setResult] = useState<ScheduleAction>();
   const [observation, setObservation] = useState('not checked');
   const [busy, setBusy] = useState(false);
-  const [showScheduler, setShowScheduler] = useState(false);
   const inFlight = useRef(false);
   const diagnostics = safeDiagnostics({
     platform: Platform.OS,
@@ -60,24 +59,19 @@ export default function ExperimentScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.eyebrow}>VORUNO · ISOLATED TEST APP</Text>
         <Text style={styles.title}>M1 · WorkoutKit experiment</Text>
-        <Text style={styles.body}>Envie pela prévia da Apple, sem agendar. Use “Adicionar ao Watch” na tela nativa. Isso salva o treino para você selecionar no relógio; não inicia uma corrida automaticamente.</Text>
+        <Text style={styles.body}>Envie ao Watch com agendamento para aproximadamente 2 segundos à frente. Selecione o treino no relógio para começar. Esse horário não garante o prazo de sincronização nem inicia uma corrida automaticamente.</Text>
         <View style={styles.card}>
           <Text style={styles.heading}>TEST ONLY · Outdoor run</Text>
           <Text style={styles.body}>VORUNO TEST ONLY 2x1m{ '\n' }Warmup 1 min → 2 × (work 1 min + recovery 30 sec) → cooldown 1 min. Total: 5 min. No pace or heart-rate targets.</Text>
-          <Button title="Enviar agora · Adicionar ao Watch" disabled={busy} onPress={() => run(() => workoutScheduling.presentTestWorkout())} />
-          <Text style={styles.body}>Sem data marcada. A Apple controla a confirmação de adicionar na prévia. Fechar ou cancelar não será tratado como envio bem-sucedido.</Text>
-          <Button title={showScheduler ? 'Ocultar teste de agendamento' : 'Mostrar teste opcional de agendamento'} disabled={busy} onPress={() => setShowScheduler(!showScheduler)} />
-          {showScheduler && <View style={styles.card}>
           <Text style={styles.body}>Capability: {snapshot?.capability ?? 'unknown'}{ '\n' }Authorization: {snapshot?.authorization ?? 'unknown'}</Text>
           <Text style={styles.body}>{snapshot?.reason ?? 'Checking the native module…'}</Text>
           <Button title="Refresh OS state / scheduler list" disabled={busy} onPress={() => { void refresh(); }} />
           <Button title="Request WorkoutKit authorization" disabled={busy || snapshot?.capability !== 'supported'} onPress={() => run(() => workoutScheduling.requestAuthorization())} />
-          <Button title="Schedule test · about 5 min from now" disabled={!canSchedule} onPress={() => run(() => workoutScheduling.scheduleTestWorkout())} />
+          <Button title="Enviar ao Watch · agendar em ~2 s" disabled={!canSchedule} onPress={() => run(() => workoutScheduling.scheduleTestWorkout())} />
           <Button title="Remove this test fixture only" disabled={!canSchedule || !snapshot?.fixtureCount} onPress={() => run(() => workoutScheduling.removeTestWorkout())} />
           <Text style={styles.body}>Fixture entries in OS scheduler: {snapshot?.fixtureCount ?? 'not queried / unknown'}</Text>
           {snapshot?.scheduledFor && <Text style={styles.body}>Listed date (local): {new Date(snapshot.scheduledFor).toLocaleString()}</Text>}
-          <Text style={styles.body}>Esta lista contém apenas agendamentos. Ela não verifica treinos adicionados pela prévia.</Text>
-          </View>}
+          <Text style={styles.body}>Se este teste já estiver agendado, o envio preserva o existente. Para testar outro horário, remova este agendamento, atualize a lista e envie novamente. A lista não confirma recebimento no Watch.</Text>
           <Text accessibilityLiveRegion="polite" style={styles.body}>{busy ? 'Waiting for the OS…' : result ? `${result.status} · ${result.code}\n${result.message}` : 'No action requested this session.'}</Text>
           {result?.authorization && <Text style={styles.body}>Authorization returned: {result.authorization}</Text>}
           {result?.scheduledFor && <Text style={styles.body}>Action date (local): {new Date(result.scheduledFor).toLocaleString()}</Text>}
