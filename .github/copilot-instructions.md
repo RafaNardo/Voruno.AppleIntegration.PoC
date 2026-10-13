@@ -1,0 +1,2 @@
+# Coding instructions
+Follow [AGENTS.md](../AGENTS.md) and [M0→M4 experiment plan](../docs/experiments.md). The repository is a public Apple integration PoC, not the production VORUNO application. Keep scope small; Workouts via WorkoutKit, actual completed runs via HealthKit, physical-device verification. No fake native success or private health data in commits. Native changes require EAS rebuild and iOS/watchOS versions must be checked against official Apple docs. First task: [Codex kickoff](../docs/codex-kickoff.md).
