@@ -29,6 +29,26 @@ The fixed workout is **PoC-only demo input**, never represented as an actual rec
 - Smoke check on supported iOS development build and native module loading.
 - Manual native tests required because CI simulators do not establish real Watch behavior.
 
+## M0 local verification
+
+Run from the repository root:
+
+```powershell
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npx expo install --check
+npx expo-doctor
+npm run export:ios
+npx expo config --type public
+git diff --check
+```
+
+The two focused tests exercise the unimplemented adapter contracts (including no fabricated empty HealthKit query) and the diagnostics allowlist/raw-error privacy boundary. ESLint forbids console logging in app source. The iOS export checks Metro resolution and bundle generation only; it does not compile Swift, sign an app, test layout on a phone, or establish physical acceptance. CI runs these local checks; no Apple credentials are required.
+
+Owner acceptance: follow the [M0 owner checklist](setup-windows-ios.md#m0-owner-checklist). Do not change physical tests to pass based on automated checks. No M1 implementation is authorized until installation, Metro connectivity and Fast Refresh are confirmed on the physical iPhone.
+
 ## Evidence template
 - Date / commit:
 - iPhone model / iOS:
