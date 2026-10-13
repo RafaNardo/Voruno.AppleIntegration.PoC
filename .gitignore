@@ -18,3 +18,9 @@ ios/Pods/
 health-export*
 private-evidence/
 *.xcuserstate
+/ios/
+/android/
+expo-env.d.ts
+*.ipa
+*.keystore
+credentials.json

@@ -1,6 +1,8 @@
 # VORUNO — Apple Integration PoC
 
-**Status: technical experiment — implementation and device validation pending.**
+**Status: M0 foundation implemented; EAS build and physical iPhone acceptance pending. M1 has not started.**
+
+App code lives in `src/app`, `src/features` and `src/shared`; package and build configuration live at the repository root. Start with `npm ci`, then `npm start` for the development client. See the [M0 owner checklist](docs/setup-windows-ios.md#m0-owner-checklist) before the first build, and [local verification](docs/testing.md#m0-local-verification) for available checks.
 
 Goal: validate that **Expo / React Native on Windows** can schedule a structured running workout for Apple's **Workout app on Apple Watch** via **WorkoutKit**, and then read an actually completed activity through **HealthKit**, without initially building our own watchOS app.
 

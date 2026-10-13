@@ -25,6 +25,24 @@ eas build --platform ios --profile development
 ```
 This builds on a hosted Mac. Follow Apple Developer authentication and provisioning prompts. Install from the build link on the registered iPhone; trust profile/Developer Mode settings when iOS requests. Device enrollment and distribution flow can vary: inspect current official documentation.
 
+## M0 owner checklist
+
+Run from the repository root in PowerShell. M0 uses SDK 57, an iOS-only development client, and bundle identifier `com.rafanardo.voruno.appleintegration.poc`. This is a project-specific identifier, not a verified Apple registration; confirm availability in your Apple account during provisioning. No signing material is committed.
+
+1. Install dependencies with `npm ci`. Local verification used Node 22.18.0 / npm 10.9.3 on Windows.
+2. Authenticate with `npx eas-cli@latest login`. Create the project in your [Expo dashboard](https://expo.dev/accounts) and copy its **project UUID** from project settings. Set `$env:EAS_PROJECT_ID = '<project UUID>'` for this PowerShell session (or put `EAS_PROJECT_ID` in ignored `.env`). `app.config.ts` reads this value; do not paste an Apple Team ID or credentials there. Run `npx eas-cli@latest project:info` to verify the linked project. If using `eas init` instead, dynamic config may require you to set the UUID manually.
+3. Run `npx eas-cli@latest device:create`. Open the registration link on your physical iPhone and follow the enrollment flow. Keep the UDID/private profile out of Git and public evidence.
+4. Run `npx eas-cli@latest build --platform ios --profile development`. Complete Apple Developer authentication and provisioning with your paid account, selecting the registered phone. Use EAS-managed credentials. The profile requests a physical-device internal development build, not a simulator. No HealthKit entitlement or usage description is included in M0.
+5. Install from the completed build link on that iPhone; enable Developer Mode if requested by iOS. Open **VORUNO Apple PoC**, not Expo Go.
+6. Run `npm start` on Windows, keep the phone on the same LAN, and open the Metro URL from the development client. If blocked, check Windows firewall/LAN access; `npm start -- --tunnel` is a fallback and may prompt to install Expo's tunnel dependency.
+7. Confirm the M0 screen and local diagnostics render, integrations say **not implemented**, and **Check implementation status** shows unknown capabilities without any Apple permission prompt. Scheduling/permission/read controls must stay disabled.
+8. Temporarily change `Fast Refresh marker: M0-A` in `src/app/index.tsx` to `M0-B`, save, and verify the phone updates without rebuilding the binary. Revert the marker. Close/reopen the app and reconnect to Metro.
+9. Record the sanitized evidence fields in `docs/testing.md`: iPhone model/iOS, commit, EAS build ID, resolved build image/Xcode, installation, Metro and Fast Refresh observations. Apple Watch model/watchOS can remain pending in M0; no Watch behavior is being tested yet. Send the result before M1 begins.
+
+The selected EAS image is `macos-tahoe-26.5-xcode-26.6` (documented SDK 57 image; Xcode 26.6). This is configuration, **not a completed cloud build**. Capture the actual environment from **Spin up build environment** in the build log. Keep SDK defaults for the deployment target in M0; M1 must research Apple's API minimums before changing native configuration. Swift/native configuration changes require a new binary.
+
+References checked for M0: [Expo scaffold](https://docs.expo.dev/more/create-expo/), [EAS infrastructure](https://docs.expo.dev/build-reference/infrastructure/), [internal distribution and device registration](https://docs.expo.dev/build/internal-distribution/). The scaffold and `expo install` selected package versions; `expo-doctor` verifies the resulting dependency set.
+
 ## Development loop on Windows
 ```bash
 npx expo start --dev-client

@@ -11,7 +11,7 @@ Nothing here is a backend contract. The production project owns plan persistence
 
 ## Suggested structure (adjust to actual Expo scaffold)
 ```text
-app/index.tsx                 # clear experiment controls and results
+src/app/index.tsx             # clear experiment controls and results
 src/features/workout-scheduling/
 src/features/health-activities/
 src/features/correlation/
@@ -42,6 +42,8 @@ interface HealthActivityReading {
 }
 ```
 Never infer read permission from a successful permission prompt or empty queries; HealthKit has privacy-preserving behavior. No API shall claim Watch delivery/receipt unless actually observable. Use `submitted` for scheduling call that succeeds; `observed-on-watch` requires user/device evidence (manual observation labeled as such).
+
+M0 implements separate ports in `src/features/*/port.ts`. Each operation returns an explicit `not-implemented` variant until its native milestone. In particular, the read adapter does not return an empty array that could be mistaken for an executed query. Capability remains `unknown`; an absent adapter does not establish unsupported hardware. There is no native permission request or Watch observation. Diagnostics use explicit version/platform fields and fixed capability labels, remain on-screen, and discard raw errors. Later native adapters must preserve this boundary.
 
 ## Scheduling experiment
 - Consult current WorkoutKit documentation/API availability and minimum OS versions; select matching EAS macOS/Xcode build image.
