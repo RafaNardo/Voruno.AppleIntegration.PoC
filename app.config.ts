@@ -1,9 +1,11 @@
 import type { ExpoConfig } from 'expo/config';
 
-const projectId = process.env.EAS_PROJECT_ID;
+// Public EAS project UUID, not a signing credential or Apple Team ID.
+const projectId = process.env.EAS_PROJECT_ID || '8dc3e79e-d2a8-4900-a5e1-d5fca450f162';
 
 const config: ExpoConfig = {
   name: 'VORUNO Apple PoC',
+  owner: 'rafanardo',
   slug: 'voruno-apple-integration-poc',
   version: '0.1.0',
   scheme: 'voruno-apple-poc',
@@ -17,7 +19,7 @@ const config: ExpoConfig = {
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
   },
   plugins: ['expo-router', 'expo-dev-client'],
-  extra: projectId ? { eas: { projectId } } : {},
+  extra: { eas: { projectId } },
 };
 
 export default config;

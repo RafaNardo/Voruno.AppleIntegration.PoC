@@ -65,3 +65,9 @@
 - Native limitation: `npx expo prebuild --platform ios --no-install` exits 1 on this Windows host, explicitly requiring macOS/Linux for iOS generation. No Swift compiler is available here. Autolinking/config/bundling tests are **not** native compilation. EAS must validate the Swift bridge and signing. Prior GitHub CI billing blocker is recorded above; hosted checks are not substituted for hardware evidence.
 - Observability: returned schedule call is `submitted`, queried list count is separate, owner Watch inspection is separate. `ScheduledWorkoutPlan.complete` exists but is unused; it is not HealthKit import/correlation evidence. Duplicate guard relies on the native list and is not an exactly-once guarantee across OS list lag. Removal never touches plans outside the synthetic fixture UUID.
 - Next action: build/install the M1 binary, charge/pair Watch and supply model/watchOS, request actual permission, schedule the fixture and compare every step in Apple's native Workout app. Execute restart/duplicate/offline/removal cases from [M1 checklist](m1-workoutkit.md). Do not mark M1 complete or start M2 before actual results.
+
+### 2026-10-12 — EAS project linkage repair
+
+- Owner's build command stopped at `EAS project not configured`, before native compilation. Locally, no `.env` or `EAS_PROJECT_ID` was present; the dynamic config therefore omitted `extra.eas.projectId`.
+- EAS CLI 24.13.0 found an existing project for this app's slug. Added its public project UUID as the config default, retaining the optional environment override. This is project metadata, not Apple signing information. No new project or credentials were created.
+- This repairs project discovery only. Native build, provisioning and Watch acceptance remain pending; prior development-mode/refresh reports do not substitute for a successful M1 signed build.
