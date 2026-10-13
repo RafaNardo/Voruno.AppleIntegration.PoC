@@ -5,8 +5,8 @@ The fixed workout is **PoC-only demo input**, never represented as an actual rec
 
 | Scenario | Expected evidence | Outcome |
 |---|---|---|
-| Windows Expo dev-client starts | Expo SDK, build ID (non-secret), screenshot of neutral test screen | pending |
-| JS Fast Refresh on phone | A small text change updates on physical iPhone | pending |
+| Windows Expo dev-client starts | Expo SDK, build ID (non-secret), screenshot of neutral test screen | owner reports working on iPhone iOS 26.6.1; build ID/model still pending |
+| JS Fast Refresh on phone | A small text change updates on physical iPhone | owner reports working; not independently observed |
 | Native Swift rebuild | New EAS binary includes changed native module | pending |
 | WorkoutKit supported? | OS/device capability and Apple framework response | pending |
 | Schedule intervals | Native call returns observed result; visual check on Watch | pending |
@@ -45,9 +45,11 @@ npx expo config --type public
 git diff --check
 ```
 
-The two focused tests exercise the unimplemented adapter contracts (including no fabricated empty HealthKit query) and the diagnostics allowlist/raw-error privacy boundary. ESLint forbids console logging in app source. The iOS export checks Metro resolution and bundle generation only; it does not compile Swift, sign an app, test layout on a phone, or establish physical acceptance. CI runs these local checks; no Apple credentials are required.
+The original M0 tests exercise the unimplemented HealthKit adapter and diagnostics privacy boundary. M1 adds seven TypeScript adapter tests for missing binaries, authorization, truthful submission/list/removal states, preflight failures and sanitized unknown/error responses (nine tests total). Test doubles are synthetic and never device evidence. ESLint forbids console logging in app source. The iOS export checks Metro resolution and bundle generation only; it does not compile Swift, sign an app, test layout on a phone, or establish physical acceptance. CI runs local checks; no Apple credentials are required.
 
 Owner acceptance: follow the [M0 owner checklist](setup-windows-ios.md#m0-owner-checklist). Do not change physical tests to pass based on automated checks. No M1 implementation is authorized until installation, Metro connectivity and Fast Refresh are confirmed on the physical iPhone.
+
+M0 entry gate was accepted from the owner's report of iPhone iOS 26.6.1 and working development mode/refresh. Remaining environment fields must still be captured. For M1 use the [physical checklist](m1-workoutkit.md#owner-build-and-physical-acceptance), including duplicate scheduling, restart, offline Watch and targeted removal. No M1 native test has passed yet.
 
 ## Evidence template
 - Date / commit:

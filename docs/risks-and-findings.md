@@ -1,6 +1,6 @@
 # Apple integration — risk register, decisions and findings
 
-**M0 local foundation checks pass; cloud/native build and physical-device acceptance are pending. M1–M4 have not started.**
+**M0 operation/refresh is owner-reported on iPhone iOS 26.6.1. M1 implementation/local checks are ready; native compilation, permissions and Watch scheduling remain unverified. M2–M4 have not started.**
 
 ## Open risks
 | ID | Severity | Risk / unknown | Validation |
@@ -54,3 +54,14 @@
 - Limitations: no physical UI/layout observation, signing, installation, phone Metro connectivity or Fast Refresh verified. No health records or identifiers collected. No M1/M2 native API evidence or HealthKit library evaluation is claimed.
 - Hosted CI: [first M0 workflow run](https://github.com/RafaNardo/Voruno.AppleIntegration.PoC/actions/runs/38333542141) could not start. GitHub's check annotation says the account is locked due to a billing issue. This is a runner/account blocker, not a test result; owner must resolve the GitHub billing issue and rerun CI. Local checks above are the available verification evidence.
 - Next experiment: owner follows [M0 owner checklist](setup-windows-ios.md#m0-owner-checklist), registers iPhone, builds/installs through EAS and reports sanitized environment plus Metro/Fast Refresh observations using the testing template. Only that confirmation unlocks M1 research/implementation. No go/no-go conclusion about Apple integration yet.
+
+### 2026-10-12 — M0 owner report and M1 implementation
+
+- Status: **partial, physical M1 acceptance pending**. Owner supplied iPhone iOS **26.6.1** and confirmed development mode with refresh in response to the gate question. M1 entry accepted on this report, not an agent-observed phone test. iPhone model and M0 build ID/actual Xcode image remain unspecified. Watch was discharged; model/watchOS pending. No Watch capability inferred.
+- Scope: a local Expo Swift module, real WorkoutScheduler authorization/support/list/schedule/remove APIs, five-minute fixed **TEST ONLY** running fixture, separate TS port and safe test UI. No watchOS app, backend, HealthKit query, activity fixtures or M2 dependency selection.
+- Research: official Apple declarations/availability metadata and downloaded sample inspected before Swift implementation. [Full research and exact API/source map](m1-workoutkit.md#research-before-swift-implementation). Uses iOS 17.0/watchOS 10.0 baseline APIs; real device support remains runtime-dependent. Current Apple's broader sample requires newer OS versions for its newer features.
+- Native config: `ios.deploymentTarget = 17.0`, iOS-only local pod linking WorkoutKit/HealthKit (enum use only), no extra entitlements or HealthKit usage descriptions based on the inspected scheduling sample. EAS image remains `macos-tahoe-26.5-xcode-26.6`; actual M1 image/Xcode/build ID are pending. Native module template matches installed Expo 57; package versions/lockfile unchanged from M0, including known audit risks.
+- Proven locally: TypeScript, ESLint, nine tests, Expo Doctor 21/21, Expo compatibility check, iOS Metro export. Autolinking resolves `VorunoAppleModule`; config introspection produces the iOS 17.0 pod property and empty entitlements. No private health/device/signing data collected or committed.
+- Native limitation: `npx expo prebuild --platform ios --no-install` exits 1 on this Windows host, explicitly requiring macOS/Linux for iOS generation. No Swift compiler is available here. Autolinking/config/bundling tests are **not** native compilation. EAS must validate the Swift bridge and signing. Prior GitHub CI billing blocker is recorded above; hosted checks are not substituted for hardware evidence.
+- Observability: returned schedule call is `submitted`, queried list count is separate, owner Watch inspection is separate. `ScheduledWorkoutPlan.complete` exists but is unused; it is not HealthKit import/correlation evidence. Duplicate guard relies on the native list and is not an exactly-once guarantee across OS list lag. Removal never touches plans outside the synthetic fixture UUID.
+- Next action: build/install the M1 binary, charge/pair Watch and supply model/watchOS, request actual permission, schedule the fixture and compare every step in Apple's native Workout app. Execute restart/duplicate/offline/removal cases from [M1 checklist](m1-workoutkit.md). Do not mark M1 complete or start M2 before actual results.

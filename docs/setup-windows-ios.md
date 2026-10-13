@@ -27,6 +27,8 @@ This builds on a hosted Mac. Follow Apple Developer authentication and provision
 
 ## M0 owner checklist
 
+This checklist describes the M0 screen. After moving to M1, use the [M1 build/Watch checklist](m1-workoutkit.md#owner-build-and-physical-acceptance); it requires a fresh native binary and raises the app minimum to iOS 17.0.
+
 Run from the repository root in PowerShell. M0 uses SDK 57, an iOS-only development client, and bundle identifier `com.rafanardo.voruno.appleintegration.poc`. This is a project-specific identifier, not a verified Apple registration; confirm availability in your Apple account during provisioning. No signing material is committed.
 
 1. Install dependencies with `npm ci`. Local verification used Node 22.18.0 / npm 10.9.3 on Windows.

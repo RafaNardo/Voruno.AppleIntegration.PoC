@@ -11,6 +11,7 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   userInterfaceStyle: 'light',
   ios: {
+    deploymentTarget: '17.0',
     bundleIdentifier: 'com.rafanardo.voruno.appleintegration.poc',
     supportsTablet: false,
     infoPlist: { ITSAppUsesNonExemptEncryption: false },

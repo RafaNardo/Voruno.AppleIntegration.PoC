@@ -43,7 +43,9 @@ interface HealthActivityReading {
 ```
 Never infer read permission from a successful permission prompt or empty queries; HealthKit has privacy-preserving behavior. No API shall claim Watch delivery/receipt unless actually observable. Use `submitted` for scheduling call that succeeds; `observed-on-watch` requires user/device evidence (manual observation labeled as such).
 
-M0 implements separate ports in `src/features/*/port.ts`. Each operation returns an explicit `not-implemented` variant until its native milestone. In particular, the read adapter does not return an empty array that could be mistaken for an executed query. Capability remains `unknown`; an absent adapter does not establish unsupported hardware. There is no native permission request or Watch observation. Diagnostics use explicit version/platform fields and fixed capability labels, remain on-screen, and discard raw errors. Later native adapters must preserve this boundary.
+The ports live separately in `src/features/*/port.ts`. M1 implements `WorkoutScheduling` through a local iOS Expo module at `modules/voruno-apple`. Its TS adapter validates native responses, maps only fixed status/error codes and keeps OS capability, scheduling authorization, list evidence and manual Watch observations separate. The native module exclusively owns the fixed fixture, dates, support checks, capacity, duplicate checks and targeted removal. It never queries HealthKit.
+
+`HealthActivityReading` remains explicitly `not-implemented`; it does not return an empty array that could be mistaken for an executed query. An absent M1 module leaves scheduling capability `unknown` and asks for a rebuild instead of declaring unsupported hardware. Diagnostics remain on-screen with version/platform fields and no raw errors. See [M1 decisions and limitations](m1-workoutkit.md).
 
 ## Scheduling experiment
 - Consult current WorkoutKit documentation/API availability and minimum OS versions; select matching EAS macOS/Xcode build image.
