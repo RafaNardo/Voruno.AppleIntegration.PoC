@@ -1,8 +1,10 @@
 # VORUNO — Apple Integration PoC
 
-**Status: M0 foundation implemented; EAS build and physical iPhone acceptance pending. M1 has not started.**
+**Status: owner reports M0 working with refresh on iPhone iOS 26.6.1. M1 implementation is ready for a new native build; WorkoutKit and Watch validation are pending. M2 has not started.**
 
 App code lives in `src/app`, `src/features` and `src/shared`; package and build configuration live at the repository root. Start with `npm ci`, then `npm start` for the development client. See the [M0 owner checklist](docs/setup-windows-ios.md#m0-owner-checklist) before the first build, and [local verification](docs/testing.md#m0-local-verification) for available checks.
+
+For the current experiment, follow the [M1 research, build and Watch checklist](docs/m1-workoutkit.md). The primary flow opens Apple's **Add to Watch** preview without scheduling; scheduling remains an optional test. **Install a new EAS binary** for the updated Swift module; JS Fast Refresh alone cannot add the preview method. There is no documented receipt for preview saves; manual Watch observation remains separate from automatic scheduler read-back.
 
 Goal: validate that **Expo / React Native on Windows** can schedule a structured running workout for Apple's **Workout app on Apple Watch** via **WorkoutKit**, and then read an actually completed activity through **HealthKit**, without initially building our own watchOS app.
 

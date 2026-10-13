@@ -14,10 +14,10 @@ export function safeDiagnostics(input: DiagnosticInput) {
     expoVersion: input.expoVersion,
     reactNativeVersion: input.reactNativeVersion,
     executionEnvironment: input.executionEnvironment,
-    workoutKit: 'unknown / not implemented',
+    workoutKit: 'see live scheduling panel; not inferred from OS version',
     healthKit: 'unknown / not implemented',
     watchConnectivity: 'not checked',
-    physicalAcceptance: 'pending owner confirmation',
+    physicalAcceptance: 'M1 Watch validation pending',
   } as const;
 }
 
