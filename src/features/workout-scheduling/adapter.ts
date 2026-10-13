@@ -1,6 +1,9 @@
 import type { ScheduleAction, ScheduleSnapshot, SchedulingAuthorization, WorkoutScheduling, WorkoutSchedulingNative } from './port';
 
 const explanations = {
+  'native-module-outdated': 'Instale um novo build EAS: este binário ainda não contém o envio sem agendamento.',
+  'presentation-unavailable': 'Não foi possível abrir a prévia. Feche outras telas modais e tente novamente com o app em primeiro plano.',
+  'preview-closed': 'A prévia da Apple foi fechada. O SDK não informa se você adicionou ou cancelou; confira o treino no Watch.',
   'native-module-missing': 'Install a new M1 EAS development build. The WorkoutKit module is absent from this binary.',
   unsupported: 'WorkoutScheduler reports unsupported, or this is a simulator. Use a physical iPhone with a paired supported Watch.',
   'invalid-fixture': 'The OS does not support this running activity or one of its time goals.',
@@ -33,18 +36,22 @@ function details(value: Record<string, unknown>) {
 }
 function action(code: Code, payload: Record<string, unknown> = {}): ScheduleAction {
   let status: ScheduleAction['status'] = 'blocked';
-  if (code === 'submitted' || code === 'already-scheduled' || code === 'authorization-returned' || code === 'removal-requested' || code === 'not-found') status = code;
-  if (code === 'unsupported' || code === 'native-module-missing') status = 'unavailable';
+  if (code === 'submitted' || code === 'already-scheduled' || code === 'authorization-returned' || code === 'removal-requested' || code === 'not-found' || code === 'preview-closed') status = code;
+  if (code === 'unsupported' || code === 'native-module-missing' || code === 'native-module-outdated') status = 'unavailable';
   if (code === 'native-call-failed' || code === 'native-response-invalid') status = 'unknown';
-  return { status, code, message: explanations[code], ...details(payload), ...(code === 'authorization-returned' ? { authorization: authorization(payload.authorization) } : {}) };
+  const verification: ScheduleAction['verification'] = code === 'preview-closed' ? 'not-observable' :
+    code === 'submitted' ? (payload.verification === 'scheduler-match' || payload.verification === 'not-listed' || payload.verification === 'scheduler-mismatch' ? payload.verification : 'unknown') : undefined;
+  return { status, code, message: explanations[code], verification, ...details(payload), ...(code === 'authorization-returned' ? { authorization: authorization(payload.authorization) } : {}) };
 }
 
 export function createWorkoutScheduling(native: WorkoutSchedulingNative | null): WorkoutScheduling {
-  async function invoke(method: 'requestAuthorization' | 'scheduleTestWorkout' | 'removeTestWorkout'): Promise<ScheduleAction> {
+  async function invoke(method: 'requestAuthorization' | 'scheduleTestWorkout' | 'removeTestWorkout' | 'presentTestWorkout'): Promise<ScheduleAction> {
     if (!native) return action('native-module-missing');
+    if (method === 'presentTestWorkout' && typeof native.presentTestWorkout !== 'function') return action('native-module-outdated');
     try {
-      const payload = record(await native[method]());
+      const payload = record(await native[method]?.());
       const allowed: Record<typeof method, readonly string[]> = {
+        presentTestWorkout: ['preview-closed', 'presentation-unavailable', 'invalid-fixture', 'unsupported', 'busy'],
         requestAuthorization: ['authorization-returned', 'unsupported', 'busy'],
         scheduleTestWorkout: ['submitted', 'already-scheduled', 'unsupported', 'busy', 'not-authorized', 'invalid-fixture', 'capacity-reached', 'invalid-date'],
         removeTestWorkout: ['removal-requested', 'not-found', 'unsupported', 'busy', 'not-authorized'],
@@ -56,6 +63,7 @@ export function createWorkoutScheduling(native: WorkoutSchedulingNative | null):
     }
   }
   return {
+    presentTestWorkout: () => invoke('presentTestWorkout'),
     async getCapability(): Promise<ScheduleSnapshot> {
       const unknown = (code: Code): ScheduleSnapshot => ({ capability: 'unknown', implementation: native ? 'implemented' : 'not-implemented', authorization: 'unknown', reason: explanations[code] });
       if (!native) return unknown('native-module-missing');

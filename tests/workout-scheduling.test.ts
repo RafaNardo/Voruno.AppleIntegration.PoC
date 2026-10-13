@@ -19,9 +19,43 @@ test('old binary keeps capability unknown and requires a rebuild for every actio
   const capability = await adapter.getCapability();
   assert.equal(capability.capability, 'unknown');
   assert.equal(capability.implementation, 'not-implemented');
-  for (const result of await Promise.all([adapter.requestAuthorization(), adapter.scheduleTestWorkout(), adapter.removeTestWorkout()])) {
+  for (const result of await Promise.all([adapter.presentTestWorkout(), adapter.requestAuthorization(), adapter.scheduleTestWorkout(), adapter.removeTestWorkout()])) {
     assert.equal(result.status, 'unavailable');
     assert.equal(result.code, 'native-module-missing');
+  }
+});
+
+test('unscheduled preview does not request scheduler authorization or submit a schedule', async () => {
+  let unrelatedCalls = 0;
+  const adapter = createWorkoutScheduling(bridge(null, {
+    presentTestWorkout: async () => ({ code: 'preview-closed', verification: 'scheduler-match', saved: true }),
+    requestAuthorization: async () => { unrelatedCalls++; return {}; },
+    scheduleTestWorkout: async () => { unrelatedCalls++; return {}; },
+    getState: async () => { unrelatedCalls++; return {}; },
+  }));
+  const result = await adapter.presentTestWorkout();
+  assert.equal(result.status, 'preview-closed');
+  assert.equal(result.verification, 'not-observable');
+  assert.equal('saved' in result, false);
+  assert.equal(unrelatedCalls, 0);
+});
+
+test('old M1 binary asks for rebuild and preview failures cannot become confirmed delivery', async () => {
+  assert.equal((await createWorkoutScheduling(bridge(null)).presentTestWorkout()).code, 'native-module-outdated');
+  for (const payload of [{ code: 'submitted' }, { code: 'saved' }, { code: 'observed-on-watch' }]) {
+    const result = await createWorkoutScheduling(bridge(null, { presentTestWorkout: async () => payload })).presentTestWorkout();
+    assert.equal(result.status, 'unknown');
+  }
+  const error = await createWorkoutScheduling(bridge(null, { presentTestWorkout: async () => { throw new Error('PRIVATE_TEST_SENTINEL'); } })).presentTestWorkout();
+  assert.equal(error.status, 'unknown');
+  assert.equal(JSON.stringify(error).includes('PRIVATE_TEST_SENTINEL'), false);
+});
+
+test('scheduled read-back exposes only bounded evidence, never Watch receipt', async () => {
+  for (const verification of ['scheduler-match', 'not-listed', 'scheduler-mismatch', 'watch-integrated', undefined]) {
+    const result = await createWorkoutScheduling(bridge({ code: 'submitted', verification })).scheduleTestWorkout();
+    assert.equal(result.status, 'submitted');
+    assert.equal(result.verification, verification === 'watch-integrated' || verification === undefined ? 'unknown' : verification);
   }
 });
 

@@ -9,7 +9,8 @@ export type ScheduleSnapshot = CapabilityResult & {
 
 export type ScheduleAction = {
   status: 'submitted' | 'already-scheduled' | 'authorization-returned' | 'removal-requested' |
-    'not-found' | 'unavailable' | 'blocked' | 'unknown';
+    'not-found' | 'unavailable' | 'blocked' | 'unknown' | 'preview-closed';
+  verification?: 'not-observable' | 'scheduler-match' | 'not-listed' | 'scheduler-mismatch' | 'unknown';
   code: string;
   message: string;
   authorization?: SchedulingAuthorization;
@@ -18,6 +19,7 @@ export type ScheduleAction = {
 };
 
 export interface WorkoutScheduling {
+  presentTestWorkout(): Promise<ScheduleAction>;
   getCapability(): Promise<ScheduleSnapshot>;
   requestAuthorization(): Promise<ScheduleAction>;
   scheduleTestWorkout(): Promise<ScheduleAction>;
@@ -26,6 +28,7 @@ export interface WorkoutScheduling {
 
 // Treat native payloads as untrusted until validated. Never expose raw native errors.
 export interface WorkoutSchedulingNative {
+  presentTestWorkout?(): Promise<unknown>;
   getState(): Promise<unknown>;
   requestAuthorization(): Promise<unknown>;
   scheduleTestWorkout(): Promise<unknown>;

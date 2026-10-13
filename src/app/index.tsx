@@ -13,6 +13,7 @@ export default function ExperimentScreen() {
   const [result, setResult] = useState<ScheduleAction>();
   const [observation, setObservation] = useState('not checked');
   const [busy, setBusy] = useState(false);
+  const [showScheduler, setShowScheduler] = useState(false);
   const inFlight = useRef(false);
   const diagnostics = safeDiagnostics({
     platform: Platform.OS,
@@ -59,10 +60,14 @@ export default function ExperimentScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.eyebrow}>VORUNO · ISOLATED TEST APP</Text>
         <Text style={styles.title}>M1 · WorkoutKit experiment</Text>
-        <Text style={styles.body}>Requires a new M1 development build. Scheduling, scheduler listing and manual Watch visibility are separate observations. Native build and Watch validation are pending.</Text>
+        <Text style={styles.body}>Envie pela prévia da Apple, sem agendar. Use “Adicionar ao Watch” na tela nativa. Isso salva o treino para você selecionar no relógio; não inicia uma corrida automaticamente.</Text>
         <View style={styles.card}>
           <Text style={styles.heading}>TEST ONLY · Outdoor run</Text>
           <Text style={styles.body}>VORUNO TEST ONLY 2x1m{ '\n' }Warmup 1 min → 2 × (work 1 min + recovery 30 sec) → cooldown 1 min. Total: 5 min. No pace or heart-rate targets.</Text>
+          <Button title="Enviar agora · Adicionar ao Watch" disabled={busy} onPress={() => run(() => workoutScheduling.presentTestWorkout())} />
+          <Text style={styles.body}>Sem data marcada. A Apple controla a confirmação de adicionar na prévia. Fechar ou cancelar não será tratado como envio bem-sucedido.</Text>
+          <Button title={showScheduler ? 'Ocultar teste de agendamento' : 'Mostrar teste opcional de agendamento'} disabled={busy} onPress={() => setShowScheduler(!showScheduler)} />
+          {showScheduler && <View style={styles.card}>
           <Text style={styles.body}>Capability: {snapshot?.capability ?? 'unknown'}{ '\n' }Authorization: {snapshot?.authorization ?? 'unknown'}</Text>
           <Text style={styles.body}>{snapshot?.reason ?? 'Checking the native module…'}</Text>
           <Button title="Refresh OS state / scheduler list" disabled={busy} onPress={() => { void refresh(); }} />
@@ -71,9 +76,18 @@ export default function ExperimentScreen() {
           <Button title="Remove this test fixture only" disabled={!canSchedule || !snapshot?.fixtureCount} onPress={() => run(() => workoutScheduling.removeTestWorkout())} />
           <Text style={styles.body}>Fixture entries in OS scheduler: {snapshot?.fixtureCount ?? 'not queried / unknown'}</Text>
           {snapshot?.scheduledFor && <Text style={styles.body}>Listed date (local): {new Date(snapshot.scheduledFor).toLocaleString()}</Text>}
+          <Text style={styles.body}>Esta lista contém apenas agendamentos. Ela não verifica treinos adicionados pela prévia.</Text>
+          </View>}
           <Text accessibilityLiveRegion="polite" style={styles.body}>{busy ? 'Waiting for the OS…' : result ? `${result.status} · ${result.code}\n${result.message}` : 'No action requested this session.'}</Text>
           {result?.authorization && <Text style={styles.body}>Authorization returned: {result.authorization}</Text>}
           {result?.scheduledFor && <Text style={styles.body}>Action date (local): {new Date(result.scheduledFor).toLocaleString()}</Text>}
+          {result?.verification && <Text accessibilityLiveRegion="polite" style={styles.body}>
+            Verificação: {result.verification === 'scheduler-match' ? 'o sistema retornou o mesmo plano e a mesma data na lista de agendamentos. Recebimento no Watch ainda não confirmado.' :
+              result.verification === 'not-listed' ? 'o treino ainda não apareceu na lista após 3 consultas. Resultado inconclusivo; atualize antes de reenviar.' :
+              result.verification === 'scheduler-mismatch' ? 'o identificador apareceu, mas plano/data não correspondem ao pedido. Integração não confirmada.' :
+              result.verification === 'not-observable' ? 'a API da prévia não fornece recibo nem consulta dos treinos salvos no Watch. Confirme visualmente abaixo.' :
+              'o binário não forneceu um resultado de verificação reconhecido. Nenhum sucesso confirmado.'}
+          </Text>}
         </View>
         <View style={styles.card}>
           <Text style={styles.heading}>Manual Watch observation</Text>

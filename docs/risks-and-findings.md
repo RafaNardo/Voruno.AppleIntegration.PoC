@@ -1,6 +1,6 @@
 # Apple integration — risk register, decisions and findings
 
-**M0 operation/refresh is owner-reported on iPhone iOS 26.6.1. M1 implementation/local checks are ready; native compilation, permissions and Watch scheduling remain unverified. M2–M4 have not started.**
+**Owner reports the earlier M1 version working on iPhone iOS 26.6.1. The new unscheduled-preview revision requires another native build and physical validation. Exact Watch receipt/steps remain unconfirmed. M2–M4 have not started.**
 
 ## Open risks
 | ID | Severity | Risk / unknown | Validation |
@@ -71,3 +71,11 @@
 - Owner's build command stopped at `EAS project not configured`, before native compilation. Locally, no `.env` or `EAS_PROJECT_ID` was present; the dynamic config therefore omitted `extra.eas.projectId`.
 - EAS CLI 24.13.0 found an existing project for this app's slug. Added its public project UUID as the config default, retaining the optional environment override. This is project metadata, not Apple signing information. No new project or credentials were created.
 - This repairs project discovery only. Native build, provisioning and Watch acceptance remain pending; prior development-mode/refresh reports do not substitute for a successful M1 signed build.
+
+### 2026-10-13 — Unscheduled export and verification boundaries
+
+- Owner reports “funcionou” after the EAS linkage repair and requests immediate export without scheduling plus an integration check. Record this as a working-version report, not independent proof of exact Watch contents; model/watchOS/build ID still not supplied.
+- Official Apple symbol metadata confirms `openInWorkoutApp()` is not an iOS API. Implemented the documented iOS 17+ SwiftUI `workoutPreview` flow instead: user selects Add to Watch in Apple's preview, with no date and no call to WorkoutScheduler.schedule. Scheduling remains an optional experiment. [Sources, decisions and device checklist](m1-workoutkit.md#send-without-scheduling-2026-10-13).
+- Verification constraint: no documented callback distinguishes preview saving from cancellation, nor a query confirming these unscheduled workouts on Watch. The app returns `preview-closed` / `not-observable`, requiring separate visual observation. It does not silently infer success from dismissal, app foregrounding or existing scheduler entries.
+- Scheduling verification strengthened: after a returned schedule call, up to three native list queries (500 ms apart) compare the exact WorkoutPlan and requested date. Match/missing/mismatch are explicit and none establish Watch receipt or execution. Native waiting is bounded between queries; OS call latency itself is not controlled by the app.
+- HealthKit reading, watchOS targets and remote logs remain absent. This SwiftUI revision needs a new signed build; Windows tests/bundling cannot establish Swift compilation or physical behavior. Tests cover cancellation/no fabricated receipt, old native binaries and read-back mapping. M1 is still partial; M2 remains gated.

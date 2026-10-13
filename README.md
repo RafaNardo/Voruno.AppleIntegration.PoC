@@ -4,7 +4,7 @@
 
 App code lives in `src/app`, `src/features` and `src/shared`; package and build configuration live at the repository root. Start with `npm ci`, then `npm start` for the development client. See the [M0 owner checklist](docs/setup-windows-ios.md#m0-owner-checklist) before the first build, and [local verification](docs/testing.md#m0-local-verification) for available checks.
 
-For the current experiment, follow the [M1 research, build and Watch checklist](docs/m1-workoutkit.md). **Install a new EAS binary** to include `modules/voruno-apple`; JS Fast Refresh alone cannot load the Swift module. The old M0 binary shows an explicit module-missing message.
+For the current experiment, follow the [M1 research, build and Watch checklist](docs/m1-workoutkit.md). The primary flow opens Apple's **Add to Watch** preview without scheduling; scheduling remains an optional test. **Install a new EAS binary** for the updated Swift module; JS Fast Refresh alone cannot add the preview method. There is no documented receipt for preview saves; manual Watch observation remains separate from automatic scheduler read-back.
 
 Goal: validate that **Expo / React Native on Windows** can schedule a structured running workout for Apple's **Workout app on Apple Watch** via **WorkoutKit**, and then read an actually completed activity through **HealthKit**, without initially building our own watchOS app.
 

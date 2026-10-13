@@ -45,7 +45,7 @@ npx expo config --type public
 git diff --check
 ```
 
-The original M0 tests exercise the unimplemented HealthKit adapter and diagnostics privacy boundary. M1 adds seven TypeScript adapter tests for missing binaries, authorization, truthful submission/list/removal states, preflight failures and sanitized unknown/error responses (nine tests total). Test doubles are synthetic and never device evidence. ESLint forbids console logging in app source. The iOS export checks Metro resolution and bundle generation only; it does not compile Swift, sign an app, test layout on a phone, or establish physical acceptance. CI runs local checks; no Apple credentials are required.
+The original M0 tests exercise the unimplemented HealthKit adapter and diagnostics privacy boundary. M1 adds TypeScript adapter tests for missing binaries, authorization, truthful submission/list/removal states, preflight failures and sanitized unknown/error responses. The unscheduled-preview revision adds cancellation/no-receipt, old-method compatibility and read-back mapping coverage (12 tests total). Test doubles are synthetic and never device evidence. ESLint forbids console logging in app source. The iOS export checks Metro resolution and bundle generation only; it does not compile Swift, sign an app, test layout on a phone, or establish physical acceptance. CI runs local checks; no Apple credentials are required.
 
 Owner acceptance: follow the [M0 owner checklist](setup-windows-ios.md#m0-owner-checklist). Do not change physical tests to pass based on automated checks. No M1 implementation is authorized until installation, Metro connectivity and Fast Refresh are confirmed on the physical iPhone.
 

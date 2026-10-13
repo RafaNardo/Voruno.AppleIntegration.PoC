@@ -1,6 +1,24 @@
-# M1 — WorkoutKit scheduling experiment
+# M1 — WorkoutKit immediate export and scheduling experiment
 
-Status: implementation ready for a new EAS development build; Swift compilation, authorization and physical Watch delivery are **unverified**. M2 is not implemented. This PR is based on the M0 branch until PR #1 is merged.
+Status: owner reports the previous M1 version working. This revision adds unscheduled export and stronger scheduler read-back; its native compilation and device behavior require a **new EAS build**. Exact Watch receipt/steps remain unverified. M2 is not implemented. This PR is based on the M0 branch until PR #1 is merged.
+
+## Send without scheduling (2026-10-13)
+
+The primary button now opens Apple's iPhone preview via [`workoutPreview(_:isPresented:)`](https://developer.apple.com/documentation/swiftui/view/workoutpreview(_:ispresented:)), available from iOS 17. The user chooses **Add to Watch** in Apple's UI, with no scheduled date. Apple describes this export flow in [WWDC23, preview section](https://developer.apple.com/videos/play/wwdc2023/10016/?time=660); the current official sample's `PresentPreviewDemo.swift` uses this SwiftUI modifier. UIKit hosts that SwiftUI view over the Expo app. The flow does not call `schedule` or require WorkoutScheduler authorization. It does not start a running workout automatically, and no immediate sync-time guarantee is claimed.
+
+Do not call [`openInWorkoutApp()`](https://developer.apple.com/documentation/workoutkit/workoutplan/openinworkoutapp()) from iOS: the official symbol's availability metadata lists watchOS and macOS, not iOS. Its name alone is not proof of iPhone availability. No watchOS target is added.
+
+The preview modifier takes a plan and presentation binding, with **no documented save result, delivery receipt or saved-on-Watch query**. Dismissal can mean saved or canceled; both return `preview-closed` with verification `not-observable`. The app discards any supposed success flag and asks for manual observation. A canceled preview must never turn green as an integration success. Existing scheduled entries neither prove nor disprove preview export; the two paths are distinct. Removing a schedule does not delete an unscheduled workout saved by the user.
+
+The optional scheduling panel retains M1's earlier experiment. After scheduling, native code re-reads the OS list up to three times, 500 ms apart, comparing the full `WorkoutPlan` and normalized requested date. It reports `scheduler-match`, `not-listed`, or `scheduler-mismatch`; even an exact match confirms only the scheduler list, **not Watch receipt**. An old M1 binary without this verification field remains `unknown`, and an old binary without the preview method explicitly requests a rebuild.
+
+Device checks for this revision:
+
+1. Build/install the new EAS binary. Tap **Enviar agora · Adicionar ao Watch**, then use Apple's **Add to Watch** action. No scheduler authorization or schedule should be created by this action.
+2. Close the preview and inspect the returned verification limitation. Open Apple's Workout app on Watch, locate **VORUNO TEST ONLY 2x1m**, inspect all five minutes of steps and record the separate manual observation.
+3. Repeat but **cancel** the Apple preview; expect the same inconclusive dismissal state, never a success claim. Test the old M1 binary to confirm the rebuild message.
+4. With Watch offline/unpaired as feasible, record the actual Apple UI response and whether export becomes visible after reconnection. No simulated receipt or timeout success.
+5. Expand the optional scheduling panel to test automatic read-back independently. An earlier identical plan/date in the scheduler cannot confirm an unscheduled export. Do not automatically remove the owner's existing scheduled fixture when opening the preview.
 
 ## Entry evidence
 
@@ -33,7 +51,7 @@ The local module was generated with [create-expo-module](https://docs.expo.dev/m
 - Date: native current time plus five minutes, rounded down to the minute in the current local calendar/time zone (approximately four to five minutes ahead). Phone displays the returned date locally. No date supplied by JS is trusted or required.
 - Authorization is requested only by the authorization button; schedule always checks authorization again.
 - Native mutations are serialized across async suspension. Before scheduling, the native scheduler list is checked for the fixed fixture UUID and capacity. An existing fixture produces `already-scheduled` without a new call; remove it explicitly before changing its scheduled date.
-- A restart re-queries the OS list instead of restoring a success flag from JS storage. List absence immediately after a call is possible; `submitted` with zero listed entries remains inconclusive. Deduplication relies on what the OS list currently exposes and is not an exactly-once guarantee across list lag/restarts.
+- A restart re-queries the OS list instead of restoring a success flag from JS storage. List absence after bounded read-back is possible; `submitted` with `not-listed` remains inconclusive. Deduplication relies on what the OS list currently exposes and is not an exactly-once guarantee across list lag/restarts.
 - Removal only requests removal of listed entries with the fixture UUID. It returns `removal-requested` plus a fresh count; it does not claim removal from the Watch.
 - Manual Watch observations are separate, explicitly owner-reported, in-memory and reset on an action/restart. A matching name and all steps must be inspected. No health query, console telemetry or persisted activity data is added.
 - An old M0 binary or Expo Go opens with a rebuild message and unknown capability instead of throwing for a missing module. Native/invalid-response errors expose fixed codes/messages only. A call whose response is lost stays `unknown`; refresh before retrying.
@@ -43,7 +61,7 @@ The local module was generated with [create-expo-module](https://docs.expo.dev/m
 1. On this branch, use the linked EAS project/registered phone from M0. Run `npx eas-cli@latest build --platform ios --profile development`. The image remains `macos-tahoe-26.5-xcode-26.6`. Record the actual resolved image/Xcode and new build ID. **Fast Refresh cannot add this Swift module to the M0 binary.**
 2. Install the new binary on the iPhone, run `npm start`, and connect to Metro. If it still says module missing, confirm that the new binary, not Expo Go or the M0 build, is open.
 3. Charge/pair the Apple Watch and record its model/watchOS plus iPhone model. Refresh OS state. Do not treat iOS version alone as support evidence.
-4. Tap **Request WorkoutKit authorization**, observe the actual Apple dialog and returned status. If denied/restricted/unsupported, record the code and stop scheduling. Investigate settings/pairing/provisioning with sanitized evidence; do not infer HealthKit permission.
+4. For the optional scheduling experiment, expand **Mostrar teste opcional de agendamento** and tap **Request WorkoutKit authorization**. Observe the actual Apple dialog and returned status. If denied/restricted/unsupported, record the code and stop scheduling. Investigate settings/pairing/provisioning with sanitized evidence; do not infer HealthKit permission. The immediate export path above does not require this scheduling authorization.
 5. Inspect the fixed test steps, then tap **Schedule test** once. Record the action status and scheduler count separately. Open Apple's native Workout app on the Watch; verify the exact name and each interval. Record visible/not visible using the separate manual observation controls. No execution is required to prove M1 scheduling.
 6. Tap schedule again: if the fixture is listed, expect `already-scheduled`, without a new entry. Close/reopen the app and refresh; state must come from the OS. Test background/foreground after changing authorization in Settings if available.
 7. Tap **Remove this test fixture only** and refresh. Observe Watch removal separately. Then test scheduling while the Watch is offline and after reconnecting: phone submission must never become automatic Watch receipt.

@@ -1,6 +1,8 @@
 import Foundation
 import HealthKit // Activity/location enums only. No HKHealthStore or health-data access.
 import WorkoutKit
+import SwiftUI
+import UIKit
 
 @MainActor
 final class WorkoutSchedulingService {
@@ -88,6 +90,37 @@ final class WorkoutSchedulingService {
     return ["code": "authorization-returned", "authorization": authorizationName(authorization)]
   }
 
+  func preview(from presenter: UIViewController?) async -> [String: Any] {
+    #if targetEnvironment(simulator)
+    return ["code": "unsupported"]
+    #else
+    // Preview/export is independent of WorkoutScheduler authorization/support.
+    guard !busy else { return ["code": "busy"] }
+    guard let plan = fixture() else { return ["code": "invalid-fixture"] }
+    guard let presenter, presenter.viewIfLoaded?.window != nil,
+          presenter.presentedViewController == nil, !presenter.isBeingDismissed else {
+      return ["code": "presentation-unavailable"]
+    }
+    busy = true
+    defer { busy = false }
+    return await withCheckedContinuation { continuation in
+      let model = WorkoutPreviewModel()
+      let controller = UIHostingController(rootView: WorkoutPreviewScreen(plan: plan, model: model, onClose: {}))
+      var finished = false
+      controller.rootView = WorkoutPreviewScreen(plan: plan, model: model) { [weak controller] in
+        guard !finished else { return }
+        finished = true
+        controller?.dismiss(animated: true) {
+          // Dismissal cannot distinguish Add to Watch from cancellation.
+          continuation.resume(returning: ["code": "preview-closed", "verification": "not-observable"])
+        }
+      }
+      controller.isModalInPresentation = true
+      presenter.present(controller, animated: true) { model.presented = true }
+    }
+    #endif
+  }
+
   func schedule() async -> [String: Any] {
     guard supported else { return ["code": "unsupported"] }
     guard !busy else { return ["code": "busy"] }
@@ -110,8 +143,22 @@ final class WorkoutSchedulingService {
     guard let date = calendar.date(from: components), date > Date() else { return ["code": "invalid-date"] }
     // Nonthrowing async Void API. Returning does NOT prove Watch receipt.
     await scheduler.schedule(plan, at: components)
-    var result = summary(await scheduler.scheduledWorkouts)
+    // Bounded read-back checks exact fixture content AND requested date, not just count.
+    var listed: [ScheduledWorkoutPlan] = []
+    var verification = "not-listed"
+    for attempt in 0..<3 {
+      listed = await scheduler.scheduledWorkouts
+      let candidates = matches(listed)
+      if candidates.contains(where: { $0.plan.id == plan.id && $0.plan.workout == plan.workout && calendar.date(from: $0.date) == date }) {
+        verification = "scheduler-match"
+        break
+      }
+      verification = candidates.isEmpty ? "not-listed" : "scheduler-mismatch"
+      if attempt < 2 { try? await Task.sleep(nanoseconds: 500_000_000) }
+    }
+    var result = summary(listed)
     result["code"] = "submitted"
+    result["verification"] = verification
     result["scheduledFor"] = ISO8601DateFormatter().string(from: date)
     return result
   }
