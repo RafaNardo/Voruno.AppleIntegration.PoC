@@ -45,7 +45,7 @@ Never infer read permission from a successful permission prompt or empty queries
 
 The ports live separately in `src/features/*/port.ts`. M1 implements `WorkoutScheduling` through a local iOS Expo module at `modules/voruno-apple`. Its TS adapter validates native responses, maps only fixed status/error codes and keeps OS capability, scheduling authorization, list evidence and manual Watch observations separate. The native module exclusively owns the fixed fixture, dates, support checks, capacity, duplicate checks and targeted removal. It never queries HealthKit.
 
-`HealthActivityReading` remains explicitly `not-implemented`; it does not return an empty array that could be mistaken for an executed query. An absent M1 module leaves scheduling capability `unknown` and asks for a rebuild instead of declaring unsupported hardware. Diagnostics remain on-screen with version/platform fields and no raw errors. See [M1 decisions and limitations](m1-workoutkit.md).
+M2 implements `HealthActivityReading` through the evaluated Kingstinct HealthKit library and a narrow TS adapter. Native support, completed permission request, unknown read authorization, successful empty query and failure remain separate. Queries are explicit, bounded and read-only; only allowlisted fields reach screen memory. The local Swift module continues to own only WorkoutKit. An absent native binary asks for a rebuild; no fake records are substituted. See [M2 research and acceptance](m2-healthkit.md) and [M1 decisions](m1-workoutkit.md).
 
 ## Scheduling experiment
 - Consult current WorkoutKit documentation/API availability and minimum OS versions; select matching EAS macOS/Xcode build image.

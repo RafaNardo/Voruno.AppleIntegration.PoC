@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { version as expoVersion } from 'expo/package.json';
 import { version as reactNativeVersion } from 'react-native/package.json';
 import { workoutScheduling } from '../features/workout-scheduling';
+import { HealthActivitiesPanel } from '../features/health-activities/HealthActivitiesPanel';
 import type { ScheduleAction, ScheduleSnapshot } from '../features/workout-scheduling/port';
 import { safeDiagnostics, safeErrorMessage } from '../shared/diagnostics/safe-diagnostics';
 
@@ -58,7 +59,7 @@ export default function ExperimentScreen() {
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.eyebrow}>VORUNO · ISOLATED TEST APP</Text>
-        <Text style={styles.title}>M1 · WorkoutKit experiment</Text>
+        <Text style={styles.title}>M2 · HealthKit + WorkoutKit</Text>
         <Text style={styles.body}>Envie ao Watch com agendamento para aproximadamente 2 segundos à frente. Selecione o treino no relógio para começar. Esse horário não garante o prazo de sincronização nem inicia uma corrida automaticamente.</Text>
         <View style={styles.card}>
           <Text style={styles.heading}>TEST ONLY · Outdoor run</Text>
@@ -90,13 +91,7 @@ export default function ExperimentScreen() {
           <Button title="I do not see the test on Watch" disabled={busy} onPress={() => setObservation('not visible — owner visual report, this session only')} />
           <Text style={styles.body}>{observation}</Text>
         </View>
-        <View style={styles.card}>
-          <Text style={styles.heading}>HealthKit · M2 deferred</Text>
-          <Text style={styles.body}>HealthKit: not implemented (M2). Read permission unknown.</Text>
-          <Button title="Request HealthKit permission · M2" disabled onPress={() => {}} />
-          <Button title="Read running workouts · M2" disabled onPress={() => {}} />
-          <Text style={styles.body}>No recorded activity is queried. Watch connectivity is not measured by this app.</Text>
-        </View>
+        <HealthActivitiesPanel />
         <View style={styles.card}>
           <Text style={styles.heading}>Local diagnostics</Text>
           {Object.entries(diagnostics).map(([key, value]) => <Text selectable key={key} style={styles.diagnostic}>{key}: {value}</Text>)}

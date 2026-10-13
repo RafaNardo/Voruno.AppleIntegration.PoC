@@ -19,7 +19,11 @@ const config: ExpoConfig = {
     supportsTablet: false,
     infoPlist: { ITSAppUsesNonExemptEncryption: false },
   },
-  plugins: ['expo-router', 'expo-dev-client'],
+  plugins: ['expo-router', 'expo-dev-client', ['@kingstinct/react-native-healthkit', {
+    NSHealthShareUsageDescription: 'A PoC VORUNO lê suas corridas, distância e, se você escolher, frequência cardíaca para validar a integração com o Apple Watch. Os dados ficam apenas nesta tela.',
+    NSHealthUpdateUsageDescription: false,
+    background: false,
+  }]],
   extra: { eas: { projectId } },
 };
 

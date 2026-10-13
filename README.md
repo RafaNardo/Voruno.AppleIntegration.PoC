@@ -1,10 +1,10 @@
 # VORUNO — Apple Integration PoC
 
-**Status: owner reports M0 working with refresh on iPhone iOS 26.6.1 and M1 scheduling working on Watch, including a two-second delay. Unscheduled preview export did not produce a visible workout. Full M1 acceptance details remain pending; M2 has not started.**
+**Status: owner reports M1 scheduling working on Watch, including a two-second delay, and authorized M2. HealthKit reading is implemented; its new native build and real-run acceptance are pending. M3 has not started. iPhone iOS 26.6.1; Apple Watch SE/watchOS 26.6 (owner-reported).**
 
 App code lives in `src/app`, `src/features` and `src/shared`; package and build configuration live at the repository root. Start with `npm ci`, then `npm start` for the development client. See the [M0 owner checklist](docs/setup-windows-ios.md#m0-owner-checklist) before the first build, and [local verification](docs/testing.md#m0-local-verification) for available checks.
 
-For the current experiment, follow the [M1 research, build and Watch checklist](docs/m1-workoutkit.md). The primary flow schedules the test approximately two seconds ahead, retaining automatic scheduler read-back and separate manual Watch observation. An existing fixture is preserved; rescheduling requires explicit removal. **Install a new EAS binary** to include the PoC app icon. The short delay is not a delivery deadline or automatic workout start.
+For the current experiment, follow the [M2 HealthKit build and real-run checklist](docs/m2-healthkit.md). **Install a new EAS binary** for HealthKit/Nitro and the read entitlement. Request access explicitly, then read up to 20 recent runs; HR is optional. Data stays on the phone in screen memory. M1 scheduling remains available, with separate manual Watch observation; no planned-to-recorded match is claimed.
 
 Goal: validate that **Expo / React Native on Windows** can schedule a structured running workout for Apple's **Workout app on Apple Watch** via **WorkoutKit**, and then read an actually completed activity through **HealthKit**, without initially building our own watchOS app.
 

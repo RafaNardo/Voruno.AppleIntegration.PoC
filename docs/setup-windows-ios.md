@@ -46,6 +46,8 @@ The selected EAS image is `macos-tahoe-26.5-xcode-26.6` (documented SDK 57 image
 References checked for M0: [Expo scaffold](https://docs.expo.dev/more/create-expo/), [EAS infrastructure](https://docs.expo.dev/build-reference/infrastructure/), [internal distribution and device registration](https://docs.expo.dev/build/internal-distribution/). The scaffold and `expo install` selected package versions; `expo-doctor` verifies the resulting dependency set.
 
 ## Development loop on Windows
+
+M2 adds native HealthKit/Nitro dependencies and a HealthKit entitlement. Follow the [M2 build/signing and real-run checklist](m2-healthkit.md#owner-build-and-physical-acceptance); a new development build is required even if the M1 app is already installed. Read permission is requested on the physical iPhone after installation, not by Expo/Metro.
 ```bash
 npx expo start --dev-client
 ```
