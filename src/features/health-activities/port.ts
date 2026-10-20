@@ -47,6 +47,10 @@ export type DistanceInterval = Readonly<{
   distanceMeters?: number;
   coverage: number;
   quality: 'sample-sum' | 'estimated' | 'missing' | 'overlap';
+  paceSecondsPerKm?: number;
+  speedSampleCount?: number;
+  cadenceStepsPerMinute?: number;
+  cadenceEstimated?: boolean;
 }>;
 export type RecordedEvent = Readonly<{
   kind: 'pause' | 'resume' | 'lap' | 'marker' | 'motionPaused' | 'motionResumed' | 'segment' | 'pauseOrResumeRequest' | 'unknown';
@@ -63,4 +67,6 @@ export type HealthDetails = HealthFailure | Readonly<{
   samplesTruncated: boolean;
   eventsTruncated: boolean;
   invalidSamples: boolean;
+  speedStatus: 'queried' | 'failed' | 'incomplete';
+  cadenceStatus: 'queried' | 'failed' | 'incomplete';
 }>;

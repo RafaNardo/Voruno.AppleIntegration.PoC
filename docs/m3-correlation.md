@@ -8,6 +8,16 @@ The features use APIs already shipped in Kingstinct HealthKit 16.2.0/core 16.2.0
 
 ## What the details mean
 
+### Pace/cadence and readability revision
+
+The history now appears before collapsed PoC scheduling/diagnostics controls. Each run has its own dated card, prominent km/duration/HR, expandable origin/correlation evidence, and details tabs with ten rows at a time. Text wraps and controls have at least 44-point targets; physical-device readability remains to be checked.
+
+Request read access again: `runningSpeed` and `stepCount` are added, with no write permission or GPS. Both queries are scoped to the selected workout, bounded to 2,001 samples to detect truncation. Invalid or truncated speed/step series are withheld; failed/empty series are not replaced with zero. These are JS changes using the installed library; no new native build is required for this revision on a working M2/M3 binary.
+
+Pace is seconds/km converted from the arithmetic mean of available speed samples intersecting a minute. It is not instantaneous pace, a time-weighted average or a Fitness split; the sample count is shown and long/coalesced samples can span multiple buckets. Zero mean speed has no finite pace. Cadence uses associated step counts apportioned across the minute, divided by its elapsed duration; only full temporal coverage without overlaps produces a value. Boundary splits are labeled estimated. Missing associated steps remain unavailable even if total daily steps exist. Neither calculation excludes pauses. No raw GPS or HR series is displayed.
+
+Sources: Apple [runningSpeed](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/runningspeed) and [stepCount](https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/stepcount). Physical next checks: permit speed/steps, inspect minute metrics, deny steps while allowing speed, test zero-speed/pause periods and compare locally with Fitness without assuming equal aggregation methods.
+
 Select **Ver detalhes · eventos e distância por minuto** on one actual run. The adapter re-queries that UUID as a running workout inside the same 14-day window; it does not retain native proxies between screen actions. No longer visible/deleted/revoked records are unavailable rather than fabricated empty details.
 
 - Distance samples are queried with `filter: { workout: selectedWorkout }`, using the library's native workout predicate, in metres. They are not unrelated iPhone/Watch samples selected only by overlapping clock time.

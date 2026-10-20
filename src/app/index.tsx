@@ -15,6 +15,7 @@ export default function ExperimentScreen() {
   const [result, setResult] = useState<ScheduleAction>();
   const [observation, setObservation] = useState('not checked');
   const [busy, setBusy] = useState(false);
+  const [showTools, setShowTools] = useState(false);
   const [planned, setPlanned] = useState<PlannedTest>();
   const inFlight = useRef(false);
   const diagnostics = safeDiagnostics({
@@ -70,7 +71,10 @@ export default function ExperimentScreen() {
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.eyebrow}>VORUNO · ISOLATED TEST APP</Text>
-        <Text style={styles.title}>M2 + M3 · Detalhes e correspondência</Text>
+        <Text style={styles.title}>Histórico de corridas</Text>
+        <HealthActivitiesPanel planned={planned} />
+        <Button title={showTools ? 'Ocultar controles da PoC' : 'Agendar treino e ver diagnósticos'} onPress={() => setShowTools(!showTools)} />
+        {showTools && <>
         <Text style={styles.body}>Envie ao Watch com agendamento para aproximadamente 2 segundos à frente. Selecione o treino no relógio para começar. Esse horário não garante o prazo de sincronização nem inicia uma corrida automaticamente.</Text>
         <View style={styles.card}>
           <Text style={styles.heading}>TEST ONLY · Outdoor run</Text>
@@ -102,13 +106,13 @@ export default function ExperimentScreen() {
           <Button title="I do not see the test on Watch" disabled={busy} onPress={() => setObservation('not visible — owner visual report, this session only')} />
           <Text style={styles.body}>{observation}</Text>
         </View>
-        <HealthActivitiesPanel planned={planned} />
         <View style={styles.card}>
           <Text style={styles.heading}>Local diagnostics</Text>
           {Object.entries(diagnostics).map(([key, value]) => <Text selectable key={key} style={styles.diagnostic}>{key}: {value}</Text>)}
           <Text style={styles.body}>Versions and capability states only. No health records, device identifiers or remote diagnostics.</Text>
         </View>
         <Text style={styles.body}>Fast Refresh marker: M0-A</Text>
+        </>}
       </ScrollView>
     </SafeAreaView>
   );

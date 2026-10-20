@@ -1,6 +1,7 @@
 import type * as HealthKit from '@kingstinct/react-native-healthkit';
 import type { HealthActivityReading, HealthFailure, RunningWorkout, RecordedEvent } from './port';
 import { distanceInInterval, minuteDistances, type DistanceSample } from './intervals';
+import { addRunningMetrics, type SpeedSample } from './running-metrics';
 
 export type HealthClient = Pick<typeof HealthKit,
   'isHealthDataAvailable' | 'requestAuthorization' | 'queryWorkoutSamples'> & {
@@ -10,7 +11,7 @@ export type HealthClient = Pick<typeof HealthKit,
 
 const DAYS = 14;
 const LIMIT = 20;
-const readTypes = ['HKWorkoutTypeIdentifier', 'HKQuantityTypeIdentifierDistanceWalkingRunning'] as const;
+const readTypes = ['HKWorkoutTypeIdentifier', 'HKQuantityTypeIdentifierDistanceWalkingRunning', 'HKQuantityTypeIdentifierRunningSpeed', 'HKQuantityTypeIdentifierStepCount'] as const;
 const fail = (status: HealthFailure['status'], code: string, message: string): HealthFailure => ({ status, code, message });
 const missing = () => fail('unavailable', 'native-unavailable', 'HealthKit indisponível. Instale o novo development build no iPhone.');
 const unsupported = () => fail('unavailable', 'health-unavailable', 'HealthKit não está disponível neste dispositivo.');
@@ -171,6 +172,29 @@ export function createHealthActivityReading(load: () => HealthClient | undefined
             distances.push({ id: entry.uuid, start: left, end: right, meters: entry.quantity });
           }
         } catch { distanceStatus = 'failed'; distances.length = 0; }
+        async function readMetric(type: 'HKQuantityTypeIdentifierRunningSpeed' | 'HKQuantityTypeIdentifierStepCount', unit: 'm/s' | 'count') {
+          try {
+            const values = await native!.queryQuantitySamples!(type, { unit, limit: 2001, ascending: true, filter: { workout: sample } });
+            let incomplete = values.length > 2000;
+            const rows: { id: string; start: number; end: number; amount: number }[] = [];
+            for (const entry of values.slice(0, 2000)) {
+              const left = entry.startDate.getTime();
+              const right = entry.endDate.getTime();
+              if (!entry.uuid || !Number.isFinite(left) || !Number.isFinite(right) || right < left ||
+                  (type === 'HKQuantityTypeIdentifierStepCount' && right === left) ||
+                  entry.unit !== unit || !Number.isFinite(entry.quantity) || entry.quantity < 0) {
+                incomplete = true; continue;
+              }
+              rows.push({ id: entry.uuid, start: left, end: right, amount: entry.quantity });
+            }
+            // Never compute a plausible rate from a truncated or malformed series.
+            return { status: incomplete ? 'incomplete' as const : 'queried' as const, rows: incomplete ? [] : rows };
+          } catch { return { status: 'failed' as const, rows: [] }; }
+        }
+        const speed = await readMetric('HKQuantityTypeIdentifierRunningSpeed', 'm/s');
+        const steps = await readMetric('HKQuantityTypeIdentifierStepCount', 'count');
+        const speedSamples: SpeedSample[] = speed.rows.map((s) => ({ ...s, metersPerSecond: s.amount }));
+        const stepSamples: DistanceSample[] = steps.rows.map((s) => ({ ...s, meters: s.amount }));
         const kinds: Record<number, RecordedEvent['kind']> = { 1: 'pause', 2: 'resume', 3: 'lap', 4: 'marker', 5: 'motionPaused', 6: 'motionResumed', 7: 'segment', 8: 'pauseOrResumeRequest' };
         const events: RecordedEvent[] = [];
         const rawEvents = sample.events ?? [];
@@ -184,8 +208,9 @@ export function createHealthActivityReading(load: () => HealthClient | undefined
           });
         }
         events.sort((a, b) => a.startSeconds - b.startSeconds);
-        return { status: 'queried', workoutId: id, minutes: minuteDistances(distances, start, end), events,
+        return { status: 'queried', workoutId: id, minutes: addRunningMetrics(minuteDistances(distances, start, end), start, speedSamples, stepSamples), events,
           distanceStatus, samplesTruncated, invalidSamples, eventsTruncated: rawEvents.length > 200,
+          speedStatus: speed.status, cadenceStatus: steps.status,
         };
       } catch {
         return fail('failed', 'details-failed', 'Não foi possível consultar os detalhes desta corrida. Atualize e tente novamente.');

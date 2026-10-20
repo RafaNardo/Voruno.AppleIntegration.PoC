@@ -46,7 +46,7 @@ test('permission requests only read types, HR is opt-in, completion never establ
   const permission = await port.requestPermission(false);
   assert.equal(permission.status, 'requested');
   if (permission.status === 'requested') assert.equal(permission.readStatus, 'unknown');
-  assert.deepEqual(requests[0], { toShare: [], toRead: ['HKWorkoutTypeIdentifier', 'HKQuantityTypeIdentifierDistanceWalkingRunning'] });
+  assert.deepEqual(requests[0], { toShare: [], toRead: ['HKWorkoutTypeIdentifier', 'HKQuantityTypeIdentifierDistanceWalkingRunning', 'HKQuantityTypeIdentifierRunningSpeed', 'HKQuantityTypeIdentifierStepCount'] });
   await port.requestPermission(true);
   assert.deepEqual(requests[1]?.toRead, [...requests[0]!.toRead!, 'HKQuantityTypeIdentifierHeartRate']);
   assert.deepEqual(requests[1]?.toShare, []);
@@ -241,5 +241,29 @@ test('detail bounds flag sample truncation and invalid samples; excessive workou
   assert.equal(result.invalidSamples, true);
   long = true;
   assert.equal((await port.getRunningWorkoutDetails('synthetic-run-1')).status, 'unavailable');
-  assert.equal(calls, 1);
+  assert.equal(calls, 3);
+});
+
+test('speed and step reads stay scoped to the workout, request explicit units and return derived minute metrics', async () => {
+  const workout = sample({ endDate: new Date('2030-01-19T10:01:00Z') });
+  const calls: string[] = [];
+  const port = createHealthActivityReading(() => client({ queryWorkoutSamples: async () => [workout],
+    queryQuantitySamples: (async (type: string, options: { unit: string; filter: { workout: Sample } }) => {
+      calls.push(type);
+      assert.equal(options.filter.workout, workout);
+      const speed = type === 'HKQuantityTypeIdentifierRunningSpeed';
+      const steps = type === 'HKQuantityTypeIdentifierStepCount';
+      assert.equal(options.unit, speed ? 'm/s' : steps ? 'count' : 'm');
+      return [{ uuid: `synthetic-${type}`, startDate: workout.startDate, endDate: workout.endDate,
+        quantity: speed ? 2.5 : steps ? 160 : 150, unit: options.unit }];
+    }) as unknown as HealthClient['queryQuantitySamples'],
+  }), now);
+  await port.requestPermission(false);
+  const result = await port.getRunningWorkoutDetails(workout.uuid);
+  if (result.status !== 'queried') return assert.fail('expected details');
+  assert.equal(calls.length, 3);
+  assert.equal(result.speedStatus, 'queried');
+  assert.equal(result.cadenceStatus, 'queried');
+  assert.equal(result.minutes[0]?.paceSecondsPerKm, 400);
+  assert.equal(result.minutes[0]?.cadenceStepsPerMinute, 160);
 });
