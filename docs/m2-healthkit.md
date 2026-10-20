@@ -1,6 +1,6 @@
 # M2 — Read actual running workouts
 
-Status: implementation and Windows checks complete; native build and physical HealthKit acceptance pending. Owner explicitly authorized M2 after reporting two-second WorkoutKit scheduling working on Watch. This accepts the transition without declaring the remaining M1 tests passed. iPhone iOS 26.6.1 (model pending); Apple Watch SE, watchOS 26.6 (generation unspecified), owner-reported. M3 is not implemented.
+Status update (2026-10-19): owner reports the original M2 summary working and authorized details plus M3 for joint testing. Follow the [current combined checklist](m3-correlation.md). The sections below document the original M2 summary implementation and build setup; its statements about deferred detail/correlation work describe that earlier revision. Exact environment and full physical acceptance matrix remain pending. iPhone iOS 26.6.1 (model pending); Apple Watch SE, watchOS 26.6 (generation unspecified), owner-reported.
 
 ## Library evaluation and native configuration
 

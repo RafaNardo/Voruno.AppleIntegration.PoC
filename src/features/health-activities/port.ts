@@ -8,6 +8,7 @@ export type RunningWorkout = Readonly<{
   distanceMeters?: number;
   averageHeartRateBpm?: number;
   source: { name: string; bundleIdentifier: string };
+  planLink?: { status: 'available'; id: string; running: boolean } | { status: 'absent' | 'failed' };
 }>;
 
 export type HealthFailure = Readonly<{
@@ -37,4 +38,29 @@ export interface HealthActivityReading {
   getCapability(): Promise<CapabilityResult>;
   requestPermission(includeHeartRate: boolean): Promise<HealthPermission>;
   listRecentRunningWorkouts(): Promise<HealthQuery>;
+  getRunningWorkoutDetails(id: string): Promise<HealthDetails>;
 }
+
+export type DistanceInterval = Readonly<{
+  startSeconds: number;
+  endSeconds: number;
+  distanceMeters?: number;
+  coverage: number;
+  quality: 'sample-sum' | 'estimated' | 'missing' | 'overlap';
+}>;
+export type RecordedEvent = Readonly<{
+  kind: 'pause' | 'resume' | 'lap' | 'marker' | 'motionPaused' | 'motionResumed' | 'segment' | 'pauseOrResumeRequest' | 'unknown';
+  startSeconds: number;
+  endSeconds: number;
+  distance?: DistanceInterval;
+}>;
+export type HealthDetails = HealthFailure | Readonly<{
+  status: 'queried';
+  workoutId: string;
+  minutes: readonly DistanceInterval[];
+  events: readonly RecordedEvent[];
+  distanceStatus: 'queried' | 'failed';
+  samplesTruncated: boolean;
+  eventsTruncated: boolean;
+  invalidSamples: boolean;
+}>;

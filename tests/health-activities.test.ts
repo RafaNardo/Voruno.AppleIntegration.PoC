@@ -15,6 +15,7 @@ function sample(overrides: Partial<Sample> = {}): Sample {
     metadata: { privateSentinel: 'PRIVATE_SYNTHETIC' },
     device: { localIdentifier: 'PRIVATE_SYNTHETIC' },
     async getStatistic() { return undefined; },
+    async getWorkoutPlan() { return undefined; },
     toJSON() { throw new Error('Do not serialize proxies'); },
     ...overrides,
   } as Sample;
@@ -83,6 +84,7 @@ test('mapping retains recorded duration, units and provenance but strips device 
     id: 'synthetic-run-1', startedAt: '2030-01-19T10:00:00.000Z', endedAt: '2030-01-19T10:10:00.000Z',
     durationSeconds: 540, distanceMeters: 1500, averageHeartRateBpm: 140,
     source: { name: 'Synthetic source', bundleIdentifier: 'test.synthetic' },
+    planLink: { status: 'absent' },
   });
   assert.equal(JSON.stringify(result).includes('PRIVATE_SYNTHETIC'), false);
   assert.equal(metricCalls.length, 2);
@@ -156,4 +158,88 @@ test('overlapping native requests are rejected and the gate releases after compl
   finish(true);
   assert.equal((await request).status, 'requested');
   assert.equal((await port.listRecentRunningWorkouts()).status, 'queried');
+});
+
+test('plan lookup exposes only valid plan ID/sport; unavailable plan API does not discard the workout', async () => {
+  const id = '79424A80-25A6-4EE7-8A82-748851535FA1';
+  const port = createHealthActivityReading(() => client({ queryWorkoutSamples: async () => [
+    sample({ getWorkoutPlan: async () => ({ id, activityType: running }) }),
+    sample({ uuid: 'synthetic-2', getWorkoutPlan: async () => { throw new Error('PRIVATE_SYNTHETIC'); } }),
+  ] }), now);
+  await port.requestPermission(false);
+  const result = await port.listRecentRunningWorkouts();
+  if (result.status !== 'queried') return assert.fail('expected query');
+  assert.deepEqual(result.workouts[0]?.planLink, { status: 'available', id: id.toLowerCase(), running: true });
+  assert.deepEqual(result.workouts[1]?.planLink, { status: 'failed' });
+  assert.equal(JSON.stringify(result).includes('PRIVATE_SYNTHETIC'), false);
+});
+
+test('detail query scopes distance to selected workout, maps real events without metadata and marks proportional estimates', async () => {
+  const start = new Date('2030-01-19T10:00:00Z');
+  const end = new Date('2030-01-19T10:02:00Z');
+  const workout = sample({ startDate: start, endDate: end, events: [
+    { type: 7, startDate: start, endDate: new Date(start.getTime() + 60_000), metadata: { private: 'PRIVATE_SYNTHETIC' } },
+    { type: 1, startDate: end, endDate: end },
+  ] });
+  let distanceCalls = 0;
+  const native = client({ queryWorkoutSamples: async (options) => {
+    assert.equal(options.filter?.uuid, 'synthetic-run-1');
+    assert.equal(options.limit, 1);
+    return [workout];
+  }, queryQuantitySamples: (async (type: string, options: { filter: { workout: Sample }; limit: number; unit: string }) => {
+    distanceCalls++;
+    assert.equal(type, 'HKQuantityTypeIdentifierDistanceWalkingRunning');
+    assert.equal(options.filter.workout, workout);
+    assert.equal(options.limit, 2001);
+    assert.equal(options.unit, 'm');
+    return [{ uuid: 'synthetic-distance', startDate: start, endDate: end, quantity: 400, unit: 'm' }];
+  }) as unknown as HealthClient['queryQuantitySamples'] });
+  const port = createHealthActivityReading(() => native, now);
+  assert.equal((await port.getRunningWorkoutDetails('synthetic-run-1')).status, 'request-required');
+  assert.equal(distanceCalls, 0);
+  await port.requestPermission(false);
+  const result = await port.getRunningWorkoutDetails('synthetic-run-1');
+  if (result.status !== 'queried') return assert.fail('expected details');
+  assert.equal(result.minutes.length, 2);
+  assert.equal(result.minutes[0]?.distanceMeters, 200);
+  assert.equal(result.minutes[0]?.quality, 'estimated');
+  assert.equal(result.events[0]?.kind, 'segment');
+  assert.equal(result.events[0]?.distance?.distanceMeters, 200);
+  assert.equal(result.events[1]?.kind, 'pause');
+  assert.equal(result.events[1]?.distance, undefined);
+  assert.equal(JSON.stringify(result).includes('PRIVATE_SYNTHETIC'), false);
+});
+
+test('details preserve events on distance query failure; missing workout does not return fake empty details', async () => {
+  let visible = true;
+  const port = createHealthActivityReading(() => client({ queryWorkoutSamples: async () => visible ? [sample()] : [],
+    queryQuantitySamples: async () => { throw new Error('PRIVATE_SYNTHETIC'); },
+  }), now);
+  await port.requestPermission(false);
+  const result = await port.getRunningWorkoutDetails('synthetic-run-1');
+  if (result.status !== 'queried') return assert.fail('expected details');
+  assert.equal(result.distanceStatus, 'failed');
+  assert.ok(result.minutes.every((m) => m.distanceMeters === undefined));
+  assert.equal(JSON.stringify(result).includes('PRIVATE_SYNTHETIC'), false);
+  visible = false;
+  assert.equal((await port.getRunningWorkoutDetails('synthetic-run-1')).status, 'unavailable');
+});
+
+test('detail bounds flag sample truncation and invalid samples; excessive workout duration is rejected before sample query', async () => {
+  let long = false;
+  let calls = 0;
+  const port = createHealthActivityReading(() => client({ queryWorkoutSamples: async () => [sample(long ? { endDate: new Date('2030-01-19T15:00:00Z') } : {})],
+    queryQuantitySamples: (async () => {
+      calls++;
+      return Array.from({ length: 2001 }, (_, i) => ({ uuid: `synthetic-${i}`, startDate: new Date('invalid'), endDate: now(), quantity: 1, unit: 'm' }));
+    }) as unknown as HealthClient['queryQuantitySamples'],
+  }), now);
+  await port.requestPermission(false);
+  const result = await port.getRunningWorkoutDetails('synthetic-run-1');
+  if (result.status !== 'queried') return assert.fail('expected details');
+  assert.equal(result.samplesTruncated, true);
+  assert.equal(result.invalidSamples, true);
+  long = true;
+  assert.equal((await port.getRunningWorkoutDetails('synthetic-run-1')).status, 'unavailable');
+  assert.equal(calls, 1);
 });

@@ -6,6 +6,7 @@ import { version as expoVersion } from 'expo/package.json';
 import { version as reactNativeVersion } from 'react-native/package.json';
 import { workoutScheduling } from '../features/workout-scheduling';
 import { HealthActivitiesPanel } from '../features/health-activities/HealthActivitiesPanel';
+import { plannedTest, type PlannedTest } from '../features/correlation/reconcile';
 import type { ScheduleAction, ScheduleSnapshot } from '../features/workout-scheduling/port';
 import { safeDiagnostics, safeErrorMessage } from '../shared/diagnostics/safe-diagnostics';
 
@@ -14,6 +15,7 @@ export default function ExperimentScreen() {
   const [result, setResult] = useState<ScheduleAction>();
   const [observation, setObservation] = useState('not checked');
   const [busy, setBusy] = useState(false);
+  const [planned, setPlanned] = useState<PlannedTest>();
   const inFlight = useRef(false);
   const diagnostics = safeDiagnostics({
     platform: Platform.OS,
@@ -24,13 +26,20 @@ export default function ExperimentScreen() {
   });
 
   const refresh = useCallback(async () => {
-    setSnapshot(await workoutScheduling.getCapability());
+    const state = await workoutScheduling.getCapability();
+    setSnapshot(state);
+    if (state.fixtureCount === 1 && state.scheduledFor) setPlanned(plannedTest(state.scheduledFor, 'scheduler-list'));
+    if (state.fixtureCount !== undefined && state.fixtureCount > 1) setPlanned(undefined);
   }, []);
 
   useEffect(() => {
     let mounted = true;
     void workoutScheduling.getCapability().then((state) => {
-      if (mounted) setSnapshot(state);
+      if (mounted) {
+        setSnapshot(state);
+        if (state.fixtureCount === 1 && state.scheduledFor) setPlanned(plannedTest(state.scheduledFor, 'scheduler-list'));
+        if (state.fixtureCount !== undefined && state.fixtureCount > 1) setPlanned(undefined);
+      }
     });
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') void refresh();
@@ -44,7 +53,9 @@ export default function ExperimentScreen() {
     setBusy(true);
     setObservation('not checked');
     try {
-      setResult(await operation());
+      const action = await operation();
+      setResult(action);
+      if (action.status === 'submitted' && action.scheduledFor) setPlanned(plannedTest(action.scheduledFor, 'schedule-returned'));
       await refresh();
     } catch (error: unknown) {
       setResult({ status: 'unknown', code: 'ui-call-failed', message: safeErrorMessage(error) });
@@ -59,7 +70,7 @@ export default function ExperimentScreen() {
     <SafeAreaView style={styles.page}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.eyebrow}>VORUNO · ISOLATED TEST APP</Text>
-        <Text style={styles.title}>M2 · HealthKit + WorkoutKit</Text>
+        <Text style={styles.title}>M2 + M3 · Detalhes e correspondência</Text>
         <Text style={styles.body}>Envie ao Watch com agendamento para aproximadamente 2 segundos à frente. Selecione o treino no relógio para começar. Esse horário não garante o prazo de sincronização nem inicia uma corrida automaticamente.</Text>
         <View style={styles.card}>
           <Text style={styles.heading}>TEST ONLY · Outdoor run</Text>
@@ -91,7 +102,7 @@ export default function ExperimentScreen() {
           <Button title="I do not see the test on Watch" disabled={busy} onPress={() => setObservation('not visible — owner visual report, this session only')} />
           <Text style={styles.body}>{observation}</Text>
         </View>
-        <HealthActivitiesPanel />
+        <HealthActivitiesPanel planned={planned} />
         <View style={styles.card}>
           <Text style={styles.heading}>Local diagnostics</Text>
           {Object.entries(diagnostics).map(([key, value]) => <Text selectable key={key} style={styles.diagnostic}>{key}: {value}</Text>)}
