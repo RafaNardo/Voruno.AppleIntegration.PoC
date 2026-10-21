@@ -1,7 +1,9 @@
 import type * as HealthKit from '@kingstinct/react-native-healthkit';
-import type { HealthActivityReading, HealthFailure, RunningWorkout, RecordedEvent } from './port';
+import type { HealthActivityReading, HealthFailure, RunningWorkout, RecordedEvent, WorkoutStatistic, WorkoutRoute } from './port';
 import { distanceInInterval, minuteDistances, type DistanceSample } from './intervals';
 import { addRunningMetrics, type SpeedSample } from './running-metrics';
+import { normalizeRoute } from './route';
+import { extraMetrics, sampleMean } from './statistics';
 
 export type HealthClient = Pick<typeof HealthKit,
   'isHealthDataAvailable' | 'requestAuthorization' | 'queryWorkoutSamples'> & {
@@ -11,7 +13,7 @@ export type HealthClient = Pick<typeof HealthKit,
 
 const DAYS = 14;
 const LIMIT = 20;
-const readTypes = ['HKWorkoutTypeIdentifier', 'HKQuantityTypeIdentifierDistanceWalkingRunning', 'HKQuantityTypeIdentifierRunningSpeed', 'HKQuantityTypeIdentifierStepCount'] as const;
+const readTypes = ['HKWorkoutTypeIdentifier', 'HKQuantityTypeIdentifierDistanceWalkingRunning', 'HKQuantityTypeIdentifierRunningSpeed', 'HKQuantityTypeIdentifierStepCount', 'HKWorkoutRouteTypeIdentifier', ...extraMetrics.filter(m => m.type !== 'HKQuantityTypeIdentifierHeartRate').map(m => m.type)] as const;
 const fail = (status: HealthFailure['status'], code: string, message: string): HealthFailure => ({ status, code, message });
 const missing = () => fail('unavailable', 'native-unavailable', 'HealthKit indisponível. Instale o novo development build no iPhone.');
 const unsupported = () => fail('unavailable', 'health-unavailable', 'HealthKit não está disponível neste dispositivo.');
@@ -172,7 +174,7 @@ export function createHealthActivityReading(load: () => HealthClient | undefined
             distances.push({ id: entry.uuid, start: left, end: right, meters: entry.quantity });
           }
         } catch { distanceStatus = 'failed'; distances.length = 0; }
-        async function readMetric(type: 'HKQuantityTypeIdentifierRunningSpeed' | 'HKQuantityTypeIdentifierStepCount', unit: 'm/s' | 'count') {
+        async function readMetric(type: 'HKQuantityTypeIdentifierRunningSpeed' | 'HKQuantityTypeIdentifierStepCount' | 'HKQuantityTypeIdentifierHeartRate' | 'HKQuantityTypeIdentifierRunningPower', unit: 'm/s' | 'count' | 'count/min' | 'W') {
           try {
             const values = await native!.queryQuantitySamples!(type, { unit, limit: 2001, ascending: true, filter: { workout: sample } });
             let incomplete = values.length > 2000;
@@ -180,7 +182,7 @@ export function createHealthActivityReading(load: () => HealthClient | undefined
             for (const entry of values.slice(0, 2000)) {
               const left = entry.startDate.getTime();
               const right = entry.endDate.getTime();
-              if (!entry.uuid || !Number.isFinite(left) || !Number.isFinite(right) || right < left ||
+              if (!entry.uuid || !Number.isFinite(left) || !Number.isFinite(right) || right < left || left < start || right > end ||
                   (type === 'HKQuantityTypeIdentifierStepCount' && right === left) ||
                   entry.unit !== unit || !Number.isFinite(entry.quantity) || entry.quantity < 0) {
                 incomplete = true; continue;
@@ -193,6 +195,26 @@ export function createHealthActivityReading(load: () => HealthClient | undefined
         }
         const speed = await readMetric('HKQuantityTypeIdentifierRunningSpeed', 'm/s');
         const steps = await readMetric('HKQuantityTypeIdentifierStepCount', 'count');
+        const heartRate = includeHeartRate ? await readMetric('HKQuantityTypeIdentifierHeartRate', 'count/min') : { status: 'not-requested' as const, rows: [] };
+        const power = await readMetric('HKQuantityTypeIdentifierRunningPower', 'W');
+        const statistics: WorkoutStatistic[] = [];
+        for (const metric of extraMetrics) {
+          if (metric.type === 'HKQuantityTypeIdentifierHeartRate' && !includeHeartRate) {
+            statistics.push({ label: metric.label, unit: 'bpm', status: 'not-requested' }); continue;
+          }
+          try {
+            const stat = await sample.getStatistic(metric.type, metric.unit);
+            const average = value(stat?.averageQuantity, [metric.unit]);
+            const minimum = value(stat?.minimumQuantity, [metric.unit]);
+            const maximum = value(stat?.maximumQuantity, [metric.unit]);
+            const total = metric.type === 'HKQuantityTypeIdentifierActiveEnergyBurned' ? value(stat?.sumQuantity, [metric.unit]) : undefined;
+            statistics.push({ label: metric.label, unit: metric.unit === 'count/min' ? 'bpm' : metric.unit,
+              status: [average, minimum, maximum, total].some(v => v !== undefined) ? 'available' : 'missing', average, minimum, maximum, total });
+          } catch { statistics.push({ label: metric.label, unit: metric.unit, status: 'failed' }); }
+        }
+        let route: WorkoutRoute;
+        try { route = normalizeRoute(await sample.getWorkoutRoutes(), start, end); }
+        catch { route = { status: 'failed', segments: [], accepted: 0, rejected: 0, truncated: false }; }
         const speedSamples: SpeedSample[] = speed.rows.map((s) => ({ ...s, metersPerSecond: s.amount }));
         const stepSamples: DistanceSample[] = steps.rows.map((s) => ({ ...s, meters: s.amount }));
         const kinds: Record<number, RecordedEvent['kind']> = { 1: 'pause', 2: 'resume', 3: 'lap', 4: 'marker', 5: 'motionPaused', 6: 'motionResumed', 7: 'segment', 8: 'pauseOrResumeRequest' };
@@ -208,7 +230,10 @@ export function createHealthActivityReading(load: () => HealthClient | undefined
           });
         }
         events.sort((a, b) => a.startSeconds - b.startSeconds);
-        return { status: 'queried', workoutId: id, minutes: addRunningMetrics(minuteDistances(distances, start, end), start, speedSamples, stepSamples), events,
+        return { status: 'queried', workoutId: id, minutes: addRunningMetrics(minuteDistances(distances, start, end), start, speedSamples, stepSamples).map(minute => ({ ...minute,
+            heartRateBpm: sampleMean(heartRate.rows, start + minute.startSeconds * 1000, start + minute.endSeconds * 1000),
+            powerWatts: sampleMean(power.rows, start + minute.startSeconds * 1000, start + minute.endSeconds * 1000),
+          })), events, statistics, route, heartRateStatus: heartRate.status, powerStatus: power.status,
           distanceStatus, samplesTruncated, invalidSamples, eventsTruncated: rawEvents.length > 200,
           speedStatus: speed.status, cadenceStatus: steps.status,
         };

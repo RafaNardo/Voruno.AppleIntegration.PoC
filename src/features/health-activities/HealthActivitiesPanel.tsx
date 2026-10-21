@@ -79,10 +79,10 @@ export function HealthActivitiesPanel({ planned }: { planned?: PlannedTest }) {
     <Button title={showAccess ? 'Ocultar acesso e permissões' : 'Acesso e permissões'} onPress={() => setShowAccess(!showAccess)} />
     {showAccess && <View style={styles.access}>
     <Text style={styles.body}>{capability?.reason ?? 'Verificando disponibilidade…'}</Text>
-    <Text style={styles.body}>Leitura de corridas, distância, velocidade e passos. Solicite acesso novamente para habilitar ritmo e cadência. Dados somente nesta tela; a lista é limpa ao sair do app.</Text>
+    <Text style={styles.body}>Leitura de corridas, percurso GPS, distância, velocidade, passos, potência, passada, contato com o solo, oscilação vertical e energia ativa. Solicite acesso novamente para as novas categorias. Abrir detalhes consulta também o percurso salvo; não grava sua localização. Dados somente nesta tela; a lista é limpa ao sair do app.</Text>
     <View style={styles.row}>
-      <Text style={styles.body}>Incluir frequência cardíaca média</Text>
-      <Switch accessibilityLabel="Incluir frequência cardíaca média" value={includeHeartRate} disabled={busy}
+      <Text style={styles.body}>Incluir frequência cardíaca e detalhes</Text>
+      <Switch accessibilityLabel="Incluir frequência cardíaca e detalhes" value={includeHeartRate} disabled={busy}
         onValueChange={(value) => { setIncludeHeartRate(value); setPermission(undefined); setQuery(undefined); setDetails(undefined); }} />
     </View>
     <Button title="Solicitar acesso de leitura ao Saúde" disabled={busy || capability?.capability !== 'supported'} onPress={() => { void request(); }} />
@@ -114,7 +114,7 @@ export function HealthActivitiesPanel({ planned }: { planned?: PlannedTest }) {
         {correlation?.candidates.some((c) => c.workoutId === workout.id) && <Text style={styles.body}>Confiança: {correlation.candidates.find((c) => c.workoutId === workout.id)?.confidence === 'stronger' ? 'evidência mais forte (ID do plano + horário)' : 'baixa (somente horário e duração)'}.</Text>}
         <Text style={styles.body}>{correlation?.candidates.find((c) => c.workoutId === workout.id)?.reason ?? 'Não selecionada como candidata nesta comparação.'}</Text>
         </View>}
-        <Button title={details?.id === workout.id ? 'Fechar detalhes' : 'Ritmo, cadência e etapas'} disabled={busy} onPress={() => { if (details?.id === workout.id) setDetails(undefined); else void readDetails(workout.id); }} />
+        <Button title={details?.id === workout.id ? 'Fechar detalhes' : 'Detalhes completos e GPS'} disabled={busy} onPress={() => { if (details?.id === workout.id) setDetails(undefined); else void readDetails(workout.id); }} />
         {details?.id === workout.id && <WorkoutDetails key={workout.id} result={details.result} />}
       </View>)}
     </>}

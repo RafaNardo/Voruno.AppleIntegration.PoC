@@ -28,6 +28,7 @@ Goal: validate that **Expo / React Native on Windows** can schedule a structured
 6. M3: test matching and failure cases; publish a go/no-go report.
 
 ## Documentation
+- [GPS, running metrics and physical validation](docs/gps-running-analysis.md)
 - [Codex instructions](AGENTS.md)
 - [Architecture & native boundary](docs/architecture.md)
 - [Windows + iPhone + EAS setup](docs/setup-windows-ios.md)
