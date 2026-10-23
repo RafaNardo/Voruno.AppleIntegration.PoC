@@ -132,3 +132,10 @@
 - Owner-reported hardware remains iPhone iOS 26.6.1 and Watch SE/watchOS 26.6. Availability of each new field, on-device layout, native route memory behavior and comparison to Fitness require owner's action; no physical success claimed.
 - Local verification: `npm run typecheck`, `npm run lint`, `npm test` (43 synthetic tests), `npm run export:ios` and `git diff --check` passed. Tests cover route filtering/gaps/render limits, optional HR, workout-scoped queries, sanitized failures, missing statistics and minute aggregation. No native compilation or physical UI/health result is claimed.
 - Expo Doctor also passed all 21 checks; no dependency updates were needed.
+
+### 2026-10-23 — Transfer guide for the official mobile app
+
+- Owner requested documentation for another agent to integrate the experiment into the official app and emphasized linking the recorded execution to the suggested workout. Added a Portuguese implementation handoff and copyable agent prompt, indexed in README.
+- Reviewed the official mobile architecture through GitHub and the current PoC source. The guide separates implemented APIs/observations from proposed production contracts, persistence, incremental sync and reconciliation. It distinguishes planned-session identity, Apple plan UUID, revisions and HealthKit execution UUID; retries preserve identity and repeated executions stay distinct.
+- Owner's positive feedback on the expanded screen is recorded as feedback, not metric-by-metric physical acceptance or proof of UUID linkage. Device validation remains required for the association and production acceptance matrix.
+- Documentation-only change: no runtime or dependency changes, no new build needed. Checked local Markdown link targets and diff whitespace; runtime tests were not rerun for prose-only edits.
