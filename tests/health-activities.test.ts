@@ -46,7 +46,7 @@ test('permission requests only read types, HR is opt-in, completion never establ
   const permission = await port.requestPermission(false);
   assert.equal(permission.status, 'requested');
   if (permission.status === 'requested') assert.equal(permission.readStatus, 'unknown');
-  assert.deepEqual(requests[0], { toShare: [], toRead: ['HKWorkoutTypeIdentifier', 'HKQuantityTypeIdentifierDistanceWalkingRunning', 'HKQuantityTypeIdentifierRunningSpeed', 'HKQuantityTypeIdentifierStepCount'] });
+  assert.deepEqual(requests[0], { toShare: [], toRead: ['HKWorkoutTypeIdentifier', 'HKQuantityTypeIdentifierDistanceWalkingRunning', 'HKQuantityTypeIdentifierRunningSpeed', 'HKQuantityTypeIdentifierStepCount', 'HKWorkoutRouteTypeIdentifier', 'HKQuantityTypeIdentifierRunningPower', 'HKQuantityTypeIdentifierRunningStrideLength', 'HKQuantityTypeIdentifierRunningGroundContactTime', 'HKQuantityTypeIdentifierRunningVerticalOscillation', 'HKQuantityTypeIdentifierActiveEnergyBurned'] });
   await port.requestPermission(true);
   assert.deepEqual(requests[1]?.toRead, [...requests[0]!.toRead!, 'HKQuantityTypeIdentifierHeartRate']);
   assert.deepEqual(requests[1]?.toShare, []);
@@ -241,7 +241,7 @@ test('detail bounds flag sample truncation and invalid samples; excessive workou
   assert.equal(result.invalidSamples, true);
   long = true;
   assert.equal((await port.getRunningWorkoutDetails('synthetic-run-1')).status, 'unavailable');
-  assert.equal(calls, 3);
+  assert.equal(calls, 4);
 });
 
 test('speed and step reads stay scoped to the workout, request explicit units and return derived minute metrics', async () => {
@@ -253,7 +253,7 @@ test('speed and step reads stay scoped to the workout, request explicit units an
       assert.equal(options.filter.workout, workout);
       const speed = type === 'HKQuantityTypeIdentifierRunningSpeed';
       const steps = type === 'HKQuantityTypeIdentifierStepCount';
-      assert.equal(options.unit, speed ? 'm/s' : steps ? 'count' : 'm');
+      assert.equal(options.unit, speed ? 'm/s' : steps ? 'count' : type === 'HKQuantityTypeIdentifierRunningPower' ? 'W' : 'm');
       return [{ uuid: `synthetic-${type}`, startDate: workout.startDate, endDate: workout.endDate,
         quantity: speed ? 2.5 : steps ? 160 : 150, unit: options.unit }];
     }) as unknown as HealthClient['queryQuantitySamples'],
@@ -261,9 +261,47 @@ test('speed and step reads stay scoped to the workout, request explicit units an
   await port.requestPermission(false);
   const result = await port.getRunningWorkoutDetails(workout.uuid);
   if (result.status !== 'queried') return assert.fail('expected details');
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 4);
   assert.equal(result.speedStatus, 'queried');
   assert.equal(result.cadenceStatus, 'queried');
   assert.equal(result.minutes[0]?.paceSecondsPerKm, 400);
   assert.equal(result.minutes[0]?.cadenceStepsPerMinute, 160);
+});
+
+test('expanded details read workout-scoped metrics and route; HR opt-out stays unread and errors remain isolated', async () => {
+  let hrCalls = 0;
+  const workout = sample({
+    async getWorkoutRoutes() { return [{ locations: [], HKMetadataKeySyncIdentifier: 'PRIVATE_SYNTHETIC' }]; },
+    async getStatistic(type, unit) {
+      if (type === 'HKQuantityTypeIdentifierHeartRate') hrCalls++;
+      if (type === 'HKQuantityTypeIdentifierRunningGroundContactTime') throw new Error('PRIVATE_SYNTHETIC');
+      if (type === 'HKQuantityTypeIdentifierRunningPower') return { sources: [], averageQuantity: { quantity: 200, unit: unit! }, maximumQuantity: { quantity: NaN, unit: unit! } };
+      return undefined;
+    },
+  });
+  const port = createHealthActivityReading(() => client({ queryWorkoutSamples: async () => [workout],
+    queryQuantitySamples: (async (type: string, options: { unit: string; filter: { workout: Sample }; limit: number }) => {
+      assert.equal(options.filter.workout, workout);
+      assert.equal(options.limit, 2001);
+      if (type === 'HKQuantityTypeIdentifierHeartRate') hrCalls++;
+      if (type !== 'HKQuantityTypeIdentifierRunningPower') return [];
+      return [{ uuid: 'synthetic-power', startDate: workout.startDate, endDate: workout.startDate, quantity: 200, unit: 'W' }];
+    }) as unknown as HealthClient['queryQuantitySamples'],
+  }), now);
+  await port.requestPermission(false);
+  const result = await port.getRunningWorkoutDetails(workout.uuid);
+  if (result.status !== 'queried') return assert.fail('expected details');
+  assert.equal(hrCalls, 0);
+  assert.equal(result.route.status, 'queried');
+  assert.equal(result.route.accepted, 0);
+  assert.equal(result.minutes[0]?.powerWatts, 200);
+  assert.equal(result.minutes[1]?.powerWatts, undefined);
+  assert.equal(result.statistics.find(s => s.label === 'Potência')?.average, 200);
+  assert.equal(result.statistics.find(s => s.label === 'Potência')?.maximum, undefined);
+  assert.equal(result.statistics.find(s => s.label === 'Contato com o solo')?.status, 'failed');
+  assert.equal(result.heartRateStatus, 'not-requested');
+  assert.equal(JSON.stringify(result).includes('PRIVATE_SYNTHETIC'), false);
+  await port.requestPermission(true);
+  await port.getRunningWorkoutDetails(workout.uuid);
+  assert.equal(hrCalls, 2);
 });

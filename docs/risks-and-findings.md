@@ -123,3 +123,19 @@
 - Reorganized history into dated cards with large km/duration/HR metrics, collapsible plan/source evidence, minute/event tabs and incremental rows. Scheduling and diagnostics are collapsed below the history. No production navigation/backend introduced.
 - Uses existing native APIs/dependencies; this revision needs JS reload and a renewed authorization request for the added types, not a new native build on the working M2/M3 binary. Device readability, actual speed/step availability and metric comparisons remain owner checks. See the [updated method and checklist](m3-correlation.md#pacecadence-and-readability-revision).
 - Validation: typecheck, lint, 38 synthetic tests, iOS Metro export and diff whitespace check passed. Added checks for workout-scoped speed/step queries, unit conversion, zero/missing/overlapping values, duplicate samples and partial final minutes. No on-device UI inspection or metric observation claimed.
+
+### 2026-10-21 — GPS and expanded running measurements
+
+- Status: **implemented; physical acceptance pending**. Owner authorized GPS and detailed running data for evaluating training-analysis feasibility. Added local route/altitude drawings, workout statistics for power/stride/contact/oscillation/energy and optional HR, plus HR/power by elapsed minute. No coaching score, backend, Watch extension or exact planned-stage assertion.
+- Existing HealthKit 16.2.0 APIs suffice; native/dependency configuration is unchanged. Reload the working M2/M3 client and renew Apple read authorization. Route absence/failure, missing metrics, optional HR and data quality remain distinct. Source data stays in ephemeral screen memory.
+- Limits: 4-hour workout window, bounded quantity reads, 20,000 processed GPS points, 500 displayed points; no native route-fetch bound/cancellation in the installed library. Route gaps are preserved, inaccurate points filtered, and altitude is not claimed as cumulative ascent. See [methods, sources and device checklist](gps-running-analysis.md).
+- Owner-reported hardware remains iPhone iOS 26.6.1 and Watch SE/watchOS 26.6. Availability of each new field, on-device layout, native route memory behavior and comparison to Fitness require owner's action; no physical success claimed.
+- Local verification: `npm run typecheck`, `npm run lint`, `npm test` (43 synthetic tests), `npm run export:ios` and `git diff --check` passed. Tests cover route filtering/gaps/render limits, optional HR, workout-scoped queries, sanitized failures, missing statistics and minute aggregation. No native compilation or physical UI/health result is claimed.
+- Expo Doctor also passed all 21 checks; no dependency updates were needed.
+
+### 2026-10-23 — Transfer guide for the official mobile app
+
+- Owner requested documentation for another agent to integrate the experiment into the official app and emphasized linking the recorded execution to the suggested workout. Added a Portuguese implementation handoff and copyable agent prompt, indexed in README.
+- Reviewed the official mobile architecture through GitHub and the current PoC source. The guide separates implemented APIs/observations from proposed production contracts, persistence, incremental sync and reconciliation. It distinguishes planned-session identity, Apple plan UUID, revisions and HealthKit execution UUID; retries preserve identity and repeated executions stay distinct.
+- Owner's positive feedback on the expanded screen is recorded as feedback, not metric-by-metric physical acceptance or proof of UUID linkage. Device validation remains required for the association and production acceptance matrix.
+- Documentation-only change: no runtime or dependency changes, no new build needed. Checked local Markdown link targets and diff whitespace; runtime tests were not rerun for prose-only edits.

@@ -51,6 +51,8 @@ export type DistanceInterval = Readonly<{
   speedSampleCount?: number;
   cadenceStepsPerMinute?: number;
   cadenceEstimated?: boolean;
+  heartRateBpm?: number;
+  powerWatts?: number;
 }>;
 export type RecordedEvent = Readonly<{
   kind: 'pause' | 'resume' | 'lap' | 'marker' | 'motionPaused' | 'motionResumed' | 'segment' | 'pauseOrResumeRequest' | 'unknown';
@@ -69,4 +71,19 @@ export type HealthDetails = HealthFailure | Readonly<{
   invalidSamples: boolean;
   speedStatus: 'queried' | 'failed' | 'incomplete';
   cadenceStatus: 'queried' | 'failed' | 'incomplete';
+  statistics: readonly WorkoutStatistic[];
+  route: WorkoutRoute;
+  heartRateStatus: 'queried' | 'failed' | 'incomplete' | 'not-requested';
+  powerStatus: 'queried' | 'failed' | 'incomplete';
+}>;
+
+export type WorkoutStatistic = Readonly<{
+  label: string; unit: string; status: 'available' | 'missing' | 'failed' | 'not-requested';
+  average?: number; minimum?: number; maximum?: number; total?: number;
+}>;
+export type RoutePoint = Readonly<{ latitude: number; longitude: number; seconds: number; altitude?: number }>;
+export type WorkoutRoute = Readonly<{
+  status: 'queried' | 'failed'; segments: readonly (readonly RoutePoint[])[];
+  accepted: number; rejected: number; truncated: boolean;
+  minimumAltitude?: number; maximumAltitude?: number;
 }>;
