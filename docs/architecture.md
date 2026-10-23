@@ -43,7 +43,9 @@ interface HealthActivityReading {
 ```
 Never infer read permission from a successful permission prompt or empty queries; HealthKit has privacy-preserving behavior. No API shall claim Watch delivery/receipt unless actually observable. Use `submitted` for scheduling call that succeeds; `observed-on-watch` requires user/device evidence (manual observation labeled as such).
 
-M0 implements separate ports in `src/features/*/port.ts`. Each operation returns an explicit `not-implemented` variant until its native milestone. In particular, the read adapter does not return an empty array that could be mistaken for an executed query. Capability remains `unknown`; an absent adapter does not establish unsupported hardware. There is no native permission request or Watch observation. Diagnostics use explicit version/platform fields and fixed capability labels, remain on-screen, and discard raw errors. Later native adapters must preserve this boundary.
+The ports live separately in `src/features/*/port.ts`. M1 implements `WorkoutScheduling` through a local iOS Expo module at `modules/voruno-apple`. Its TS adapter validates native responses, maps only fixed status/error codes and keeps OS capability, scheduling authorization, list evidence and manual Watch observations separate. The native module exclusively owns the fixed fixture, dates, support checks, capacity, duplicate checks and targeted removal. It never queries HealthKit.
+
+M2 implements `HealthActivityReading` through the evaluated Kingstinct HealthKit library and a narrow TS adapter. Native support, completed permission request, unknown read authorization, successful empty query and failure remain separate. Queries are explicit, bounded and read-only; only allowlisted fields reach screen memory. The local Swift module continues to own only WorkoutKit. An absent native binary asks for a rebuild; no fake records are substituted. See [M2 research and acceptance](m2-healthkit.md) and [M1 decisions](m1-workoutkit.md).
 
 ## Scheduling experiment
 - Consult current WorkoutKit documentation/API availability and minimum OS versions; select matching EAS macOS/Xcode build image.

@@ -1,0 +1,178 @@
+import Foundation
+import HealthKit // Activity/location enums only. No HKHealthStore or health-data access.
+import WorkoutKit
+import SwiftUI
+import UIKit
+
+@MainActor
+final class WorkoutSchedulingService {
+  static let shared = WorkoutSchedulingService()
+  private var busy = false
+  // Synthetic fixture identity, not an activity, person or device identifier.
+  private let fixtureID = UUID(uuidString: "79424A80-25A6-4EE7-8A82-748851535FA1")!
+  private let scheduler = WorkoutScheduler.shared
+
+  private var supported: Bool {
+    #if targetEnvironment(simulator)
+    return false
+    #else
+    return WorkoutScheduler.isSupported
+    #endif
+  }
+
+  private func authorizationName(_ value: WorkoutScheduler.AuthorizationState) -> String {
+    switch value {
+    case .authorized: return "authorized"
+    case .denied: return "denied"
+    case .notDetermined: return "not-determined"
+    case .restricted: return "restricted"
+    @unknown default: return "unknown"
+    }
+  }
+
+  private func fixture() -> WorkoutPlan? {
+    let warmup = WorkoutGoal.time(60, .seconds)
+    let work = WorkoutGoal.time(60, .seconds)
+    let recovery = WorkoutGoal.time(30, .seconds)
+    let cooldown = WorkoutGoal.time(60, .seconds)
+    guard CustomWorkout.supportsActivity(.running),
+          [warmup, work, recovery, cooldown].allSatisfy({
+            CustomWorkout.supportsGoal($0, activity: .running, location: .outdoor)
+          }) else { return nil }
+    let block = IntervalBlock(steps: [
+      IntervalStep(.work, step: WorkoutStep(goal: work)),
+      IntervalStep(.recovery, step: WorkoutStep(goal: recovery))
+    ], iterations: 2)
+    let workout = CustomWorkout(
+      activity: .running, location: .outdoor, displayName: "VORUNO TEST ONLY 2x1m",
+      warmup: WorkoutStep(goal: warmup), blocks: [block], cooldown: WorkoutStep(goal: cooldown)
+    )
+    return WorkoutPlan(.custom(workout), id: fixtureID)
+  }
+
+  private func matches(_ workouts: [ScheduledWorkoutPlan]) -> [ScheduledWorkoutPlan] {
+    workouts.filter { $0.plan.id == fixtureID }
+  }
+
+  private func summary(_ workouts: [ScheduledWorkoutPlan]) -> [String: Any] {
+    let matching = matches(workouts)
+    var result: [String: Any] = ["fixtureCount": matching.count]
+    if let entry = matching.first, let date = Calendar.autoupdatingCurrent.date(from: entry.date) {
+      result["scheduledFor"] = ISO8601DateFormatter().string(from: date)
+    }
+    return result
+  }
+
+  func state() async -> [String: Any] {
+    guard supported else {
+      return ["capability": "unsupported", "authorization": "unknown", "code": "unsupported"]
+    }
+    let authorization = await scheduler.authorizationState
+    let fixtureSupported = fixture() != nil
+    var result: [String: Any] = [
+      "capability": fixtureSupported ? "supported" : "unsupported",
+      "authorization": authorizationName(authorization),
+      "code": fixtureSupported ? "ready" : "invalid-fixture"
+    ]
+    // Do not present a zero count as a query when authorization is unavailable.
+    if authorization == .authorized {
+      result.merge(summary(await scheduler.scheduledWorkouts)) { _, new in new }
+    }
+    return result
+  }
+
+  func authorize() async -> [String: Any] {
+    guard supported else { return ["code": "unsupported"] }
+    guard !busy else { return ["code": "busy"] }
+    busy = true
+    defer { busy = false }
+    let authorization = await scheduler.requestAuthorization()
+    return ["code": "authorization-returned", "authorization": authorizationName(authorization)]
+  }
+
+  func preview(from presenter: UIViewController?) async -> [String: Any] {
+    #if targetEnvironment(simulator)
+    return ["code": "unsupported"]
+    #else
+    // Preview/export is independent of WorkoutScheduler authorization/support.
+    guard !busy else { return ["code": "busy"] }
+    guard let plan = fixture() else { return ["code": "invalid-fixture"] }
+    guard let presenter, presenter.viewIfLoaded?.window != nil,
+          presenter.presentedViewController == nil, !presenter.isBeingDismissed else {
+      return ["code": "presentation-unavailable"]
+    }
+    busy = true
+    defer { busy = false }
+    return await withCheckedContinuation { continuation in
+      let model = WorkoutPreviewModel()
+      let controller = UIHostingController(rootView: WorkoutPreviewScreen(plan: plan, model: model, onClose: {}))
+      var finished = false
+      controller.rootView = WorkoutPreviewScreen(plan: plan, model: model) { [weak controller] in
+        guard !finished else { return }
+        finished = true
+        controller?.dismiss(animated: true) {
+          // Dismissal cannot distinguish Add to Watch from cancellation.
+          continuation.resume(returning: ["code": "preview-closed", "verification": "not-observable"])
+        }
+      }
+      controller.isModalInPresentation = true
+      presenter.present(controller, animated: true) { model.presented = true }
+    }
+    #endif
+  }
+
+  func schedule() async -> [String: Any] {
+    guard supported else { return ["code": "unsupported"] }
+    guard !busy else { return ["code": "busy"] }
+    busy = true
+    defer { busy = false }
+    guard await scheduler.authorizationState == .authorized else { return ["code": "not-authorized"] }
+    guard let plan = fixture() else { return ["code": "invalid-fixture"] }
+    let existing = await scheduler.scheduledWorkouts
+    guard matches(existing).isEmpty else {
+      return summary(existing).merging(["code": "already-scheduled"]) { _, new in new }
+    }
+    guard existing.count < WorkoutScheduler.maxAllowedScheduledWorkoutCount else {
+      return ["code": "capacity-reached"]
+    }
+    let calendar = Calendar.autoupdatingCurrent
+    let proposed = Date().addingTimeInterval(2) // 2 seconds in the future to avoid scheduling in the past.
+    var components = calendar.dateComponents(in: .autoupdatingCurrent, from: proposed)
+    // Preserve seconds: minute truncation can put a short-delay test in the past.
+    components.nanosecond = 0
+    guard let date = calendar.date(from: components), date > Date() else { return ["code": "invalid-date"] }
+    // Nonthrowing async Void API. Returning does NOT prove Watch receipt.
+    await scheduler.schedule(plan, at: components)
+    // Bounded read-back checks exact fixture content AND requested date, not just count.
+    var listed: [ScheduledWorkoutPlan] = []
+    var verification = "not-listed"
+    for attempt in 0..<3 {
+      listed = await scheduler.scheduledWorkouts
+      let candidates = matches(listed)
+      if candidates.contains(where: { $0.plan.id == plan.id && $0.plan.workout == plan.workout && calendar.date(from: $0.date) == date }) {
+        verification = "scheduler-match"
+        break
+      }
+      verification = candidates.isEmpty ? "not-listed" : "scheduler-mismatch"
+      if attempt < 2 { try? await Task.sleep(nanoseconds: 500_000_000) }
+    }
+    var result = summary(listed)
+    result["code"] = "submitted"
+    result["verification"] = verification
+    result["scheduledFor"] = ISO8601DateFormatter().string(from: date)
+    return result
+  }
+
+  func remove() async -> [String: Any] {
+    guard supported else { return ["code": "unsupported"] }
+    guard !busy else { return ["code": "busy"] }
+    busy = true
+    defer { busy = false }
+    guard await scheduler.authorizationState == .authorized else { return ["code": "not-authorized"] }
+    let existing = matches(await scheduler.scheduledWorkouts)
+    guard !existing.isEmpty else { return ["code": "not-found"] }
+    // Only this fixture. Never call removeAllWorkouts or markComplete.
+    for item in existing { await scheduler.remove(item.plan, at: item.date) }
+    return summary(await scheduler.scheduledWorkouts).merging(["code": "removal-requested"]) { _, new in new }
+  }
+}

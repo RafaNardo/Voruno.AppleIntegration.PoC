@@ -27,10 +27,12 @@ This builds on a hosted Mac. Follow Apple Developer authentication and provision
 
 ## M0 owner checklist
 
+This checklist describes the M0 screen. After moving to M1, use the [M1 build/Watch checklist](m1-workoutkit.md#owner-build-and-physical-acceptance); it requires a fresh native binary and raises the app minimum to iOS 17.0.
+
 Run from the repository root in PowerShell. M0 uses SDK 57, an iOS-only development client, and bundle identifier `com.rafanardo.voruno.appleintegration.poc`. This is a project-specific identifier, not a verified Apple registration; confirm availability in your Apple account during provisioning. No signing material is committed.
 
 1. Install dependencies with `npm ci`. Local verification used Node 22.18.0 / npm 10.9.3 on Windows.
-2. Authenticate with `npx eas-cli@latest login`. Create the project in your [Expo dashboard](https://expo.dev/accounts) and copy its **project UUID** from project settings. Set `$env:EAS_PROJECT_ID = '<project UUID>'` for this PowerShell session (or put `EAS_PROJECT_ID` in ignored `.env`). `app.config.ts` reads this value; do not paste an Apple Team ID or credentials there. Run `npx eas-cli@latest project:info` to verify the linked project. If using `eas init` instead, dynamic config may require you to set the UUID manually.
+2. Authenticate with `npx eas-cli@latest login`. This repository is already linked to its existing EAS project through a public UUID in `app.config.ts`; no `.env` is required. Run `npx eas-cli@latest project:info` to verify access. For a fork/different project only, create or select the project in your [Expo dashboard](https://expo.dev/accounts), then set `$env:EAS_PROJECT_ID = '<project UUID>'` (or use ignored `.env`) to override the default. Do not use an Apple Team ID or credentials as this value.
 3. Run `npx eas-cli@latest device:create`. Open the registration link on your physical iPhone and follow the enrollment flow. Keep the UDID/private profile out of Git and public evidence.
 4. Run `npx eas-cli@latest build --platform ios --profile development`. Complete Apple Developer authentication and provisioning with your paid account, selecting the registered phone. Use EAS-managed credentials. The profile requests a physical-device internal development build, not a simulator. No HealthKit entitlement or usage description is included in M0.
 5. Install from the completed build link on that iPhone; enable Developer Mode if requested by iOS. Open **VORUNO Apple PoC**, not Expo Go.
@@ -44,6 +46,8 @@ The selected EAS image is `macos-tahoe-26.5-xcode-26.6` (documented SDK 57 image
 References checked for M0: [Expo scaffold](https://docs.expo.dev/more/create-expo/), [EAS infrastructure](https://docs.expo.dev/build-reference/infrastructure/), [internal distribution and device registration](https://docs.expo.dev/build/internal-distribution/). The scaffold and `expo install` selected package versions; `expo-doctor` verifies the resulting dependency set.
 
 ## Development loop on Windows
+
+M2 adds native HealthKit/Nitro dependencies and a HealthKit entitlement. Follow the [M2 build/signing and real-run checklist](m2-healthkit.md#owner-build-and-physical-acceptance); a new development build is required even if the M1 app is already installed. Read permission is requested on the physical iPhone after installation, not by Expo/Metro.
 ```bash
 npx expo start --dev-client
 ```

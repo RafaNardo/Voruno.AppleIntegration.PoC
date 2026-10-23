@@ -1,23 +1,36 @@
-import type { CapabilityResult, NotImplemented } from '../../shared/types/integration';
+import type { CapabilityResult } from '../../shared/types/integration';
 
-// Application contract, not a claim about a native SDK signature or Watch receipt.
+export type SchedulingAuthorization = 'authorized' | 'denied' | 'restricted' | 'not-determined' | 'unknown';
+export type ScheduleSnapshot = CapabilityResult & {
+  authorization: SchedulingAuthorization;
+  fixtureCount?: number;
+  scheduledFor?: string;
+};
+
+export type ScheduleAction = {
+  status: 'submitted' | 'already-scheduled' | 'authorization-returned' | 'removal-requested' |
+    'not-found' | 'unavailable' | 'blocked' | 'unknown' | 'preview-closed';
+  verification?: 'not-observable' | 'scheduler-match' | 'not-listed' | 'scheduler-mismatch' | 'unknown';
+  code: string;
+  message: string;
+  authorization?: SchedulingAuthorization;
+  fixtureCount?: number;
+  scheduledFor?: string;
+};
+
 export interface WorkoutScheduling {
-  getCapability(): Promise<CapabilityResult>;
-  scheduleTestWorkout(): Promise<NotImplemented | {
-    status: 'submitted' | 'failed' | 'unknown';
-    message: string;
-  }>;
+  presentTestWorkout(): Promise<ScheduleAction>;
+  getCapability(): Promise<ScheduleSnapshot>;
+  requestAuthorization(): Promise<ScheduleAction>;
+  scheduleTestWorkout(): Promise<ScheduleAction>;
+  removeTestWorkout(): Promise<ScheduleAction>;
 }
 
-export const workoutScheduling: WorkoutScheduling = {
-  async getCapability() {
-    return {
-      capability: 'unknown',
-      implementation: 'not-implemented',
-      reason: 'WorkoutKit adapter is deferred to M1. Device support has not been checked.',
-    };
-  },
-  async scheduleTestWorkout() {
-    return { status: 'not-implemented', message: 'M1 is gated on the physical iPhone development build. No workout was submitted.' };
-  },
-};
+// Treat native payloads as untrusted until validated. Never expose raw native errors.
+export interface WorkoutSchedulingNative {
+  presentTestWorkout?(): Promise<unknown>;
+  getState(): Promise<unknown>;
+  requestAuthorization(): Promise<unknown>;
+  scheduleTestWorkout(): Promise<unknown>;
+  removeTestWorkout(): Promise<unknown>;
+}
