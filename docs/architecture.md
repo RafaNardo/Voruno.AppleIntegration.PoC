@@ -61,6 +61,7 @@ M2 implements `HealthActivityReading` through the evaluated Kingstinct HealthKit
 - Data is private and never placed in commits or public logs.
 
 ## Correlation experiment
+- Current implementation: explicit per-run detail queries and a pure, memory-only correlation function. Optional HealthKit plan linkage, a native schedule date and fixed test duration supply evidence; single candidates stay possible matches and multiple candidates remain ambiguous. Recorded events are not labeled as planned stages. See [rules, limits and joint acceptance](m3-correlation.md).
 - Define a local test ID and planned start window; compare with actual start/end times, activity type, duration, target interval structure only if exposed and credible.
 - Deduplicate by stable source identity where available, otherwise clearly document fallback, confidence and ambiguity.
 - Avoid auto-link claim when multiple runs overlap or a user executes an unrelated run. Never overwrite original activity.

@@ -15,7 +15,7 @@ The fixed workout is **PoC-only demo input**, never represented as an actual rec
 | Duplicate scheduling | Defined behavior; no silent duplicate claimed | pending |
 | HealthKit permission prompt | Real UI and read-permission uncertainty documented | pending |
 | HealthKit workouts empty | No fake activity, truthful empty/unknown UI | pending |
-| Real Watch run import | Actual workout metadata, provenance, units/timezone | pending |
+| Real Watch run import | Actual workout metadata, provenance, units/timezone | owner reports M2 summary working; full comparisons and detail acceptance pending |
 | No HR/distance available | Optional metric omitted, no zero-as-data | pending |
 | Watch/iPhone sync delayed | Refresh/retry, staleness explanation | pending |
 | Unrelated run/multiple candidates | Correlation stays ambiguous, no forced match | pending |
@@ -24,6 +24,8 @@ The fixed workout is **PoC-only demo input**, never represented as an actual rec
 | iOS permission revoked | System setting guidance and truthful state | pending |
 
 ## Automated
+
+Current revision: [M2 details + M3 joint acceptance](m3-correlation.md#joint-physical-test), authorized together by the owner on 2026-10-19. 34 synthetic tests cover existing boundaries plus interval estimates/overlaps/gaps, details/plan failures and conservative correlation. Detailed event visibility, sample resolution and actual plan linkage still need owner observation. Older milestone counts below are historical.
 - TypeScript strict, ESLint, tests for status mapping, date/units, candidate correlation, idempotency logic where feasible.
 - Port/provider contract tests using test-only fake adapters (clearly separated).
 - Smoke check on supported iOS development build and native module loading.

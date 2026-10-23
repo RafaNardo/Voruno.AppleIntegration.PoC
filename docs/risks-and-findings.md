@@ -1,6 +1,6 @@
 # Apple integration — risk register, decisions and findings
 
-**Owner reports M1 scheduling working on Apple Watch SE/watchOS 26.6, with iPhone iOS 26.6.1, and explicitly authorized M2. M2 reading implementation is ready for native build/device validation; no HealthKit activity has yet been observed by this implementation. M3–M4 have not started.**
+**Owner reports M1 scheduling and M2 summary reading working on Apple Watch SE/watchOS 26.6 with iPhone iOS 26.6.1. On 2026-10-19 the owner authorized expanded M2 details and M3 together. Their implementation awaits joint physical validation; M4 has not started.**
 
 ## Open risks
 | ID | Severity | Risk / unknown | Validation |
@@ -107,3 +107,35 @@
 - Dependency audit: 30 findings (20 high/10 moderate). Two additional affected package entries are HealthKit/core through existing React Native dependency advisories; no new own-code advisory identified for those libraries. Incompatible downgrade suggested by npm was not applied.
 - Next action: owner builds/installs with EAS, completes the real read prompt, records/saves a Watch run and compares the locally returned activity. Follow [M2 physical acceptance](m2-healthkit.md#owner-build-and-physical-acceptance), including denied/empty/optional metrics/repeated refresh/background/relaunch cases. No health exports or private screenshots requested. M3 remains gated.
 - Hosted CI for [M2 PR #4](https://github.com/RafaNardo/Voruno.AppleIntegration.PoC/pull/4): [run 38427166482](https://github.com/RafaNardo/Voruno.AppleIntegration.PoC/actions/runs/38427166482) could not start any steps. GitHub's annotation again reports the account locked due to a billing issue. This is an account/runner blocker; it does not invalidate or substitute for the local checks above. Owner must resolve GitHub billing and rerun CI.
+
+### 2026-10-19 — Expanded M2 details and M3, authorized for joint testing
+
+- Owner reported M2 summary reading working, requested per-stage/minute data, then explicitly authorized expanded M2 and M3 together. This is not a claim that every prior physical acceptance case passed. Known owner-reported hardware remains iPhone iOS 26.6.1 and Apple Watch SE/watchOS 26.6; exact build environment and missing models remain pending.
+- M2 detail query re-fetches the selected running workout and reads only its associated distance samples plus recorded events. Displays elapsed-minute distances and actual event durations; proportional allocation is explicitly estimated, gaps remain missing, overlaps are withheld, truncation/invalid samples are surfaced. Limits: 4 hours, 2,000 distance samples and 200 events. No GPS, raw HR, arbitrary metadata or planned-stage labels are added. Condensed quantity series are not expanded; exact Fitness splits are not claimed.
+- M3 now calls the documented optional `HKWorkout.workoutPlan` via the existing library. Available/absent/failed are distinct. Known fixture ID plus native schedule time supplies reference; matching plan ID strengthens evidence but cannot identify a unique execution because this PoC reuses the ID. Time/duration-only candidates have low confidence; more than one candidate stays ambiguous. All results are possible matches, with no automatic association, overwrite or persistent health storage.
+- Schedule reference is in-memory, recovered only from one listed fixture after restart, retained if removed in the same session and replaced on rescheduling. No historical schedule is invented. Tests verify native/TS fixture identity agrees and duplicates do not inflate candidates. [Exact rules and combined owner checklist](m3-correlation.md).
+- Final Expo checks initially flagged four patch mismatches. Applied only Expo-selected fixes with `npx expo install --fix`: Expo 57.0.30, constants 57.0.22, linking 57.0.13, router 57.0.28; RN/HealthKit/Nitro unchanged. This revises the initial JS-only delivery expectation: owner should install a new EAS build to align native patches. No signing material or native API configuration changed.
+- Local checks after alignment: typecheck, lint, 34 synthetic tests, Expo Doctor 21/21, dependency check, iOS Metro export and diff whitespace check passed. Audit remains 30 findings (20 high/10 moderate). Real event availability, distance resolution, plan linkage, ambiguity cases and revised native build behavior remain unvalidated on hardware. No M4 recommendation yet.
+
+### 2026-10-19 — Pace/cadence and clearer history
+
+- Added read-only running-speed and step-count requests and bounded queries associated with the selected workout. Pace converts arithmetic mean speed samples; cadence derives from allocated steps with complete temporal coverage. Missing/overlapping/truncated/invalid data is withheld, with quality notes; zero speed never becomes infinite pace. GPS remains deferred as agreed.
+- Reorganized history into dated cards with large km/duration/HR metrics, collapsible plan/source evidence, minute/event tabs and incremental rows. Scheduling and diagnostics are collapsed below the history. No production navigation/backend introduced.
+- Uses existing native APIs/dependencies; this revision needs JS reload and a renewed authorization request for the added types, not a new native build on the working M2/M3 binary. Device readability, actual speed/step availability and metric comparisons remain owner checks. See the [updated method and checklist](m3-correlation.md#pacecadence-and-readability-revision).
+- Validation: typecheck, lint, 38 synthetic tests, iOS Metro export and diff whitespace check passed. Added checks for workout-scoped speed/step queries, unit conversion, zero/missing/overlapping values, duplicate samples and partial final minutes. No on-device UI inspection or metric observation claimed.
+
+### 2026-10-21 — GPS and expanded running measurements
+
+- Status: **implemented; physical acceptance pending**. Owner authorized GPS and detailed running data for evaluating training-analysis feasibility. Added local route/altitude drawings, workout statistics for power/stride/contact/oscillation/energy and optional HR, plus HR/power by elapsed minute. No coaching score, backend, Watch extension or exact planned-stage assertion.
+- Existing HealthKit 16.2.0 APIs suffice; native/dependency configuration is unchanged. Reload the working M2/M3 client and renew Apple read authorization. Route absence/failure, missing metrics, optional HR and data quality remain distinct. Source data stays in ephemeral screen memory.
+- Limits: 4-hour workout window, bounded quantity reads, 20,000 processed GPS points, 500 displayed points; no native route-fetch bound/cancellation in the installed library. Route gaps are preserved, inaccurate points filtered, and altitude is not claimed as cumulative ascent. See [methods, sources and device checklist](gps-running-analysis.md).
+- Owner-reported hardware remains iPhone iOS 26.6.1 and Watch SE/watchOS 26.6. Availability of each new field, on-device layout, native route memory behavior and comparison to Fitness require owner's action; no physical success claimed.
+- Local verification: `npm run typecheck`, `npm run lint`, `npm test` (43 synthetic tests), `npm run export:ios` and `git diff --check` passed. Tests cover route filtering/gaps/render limits, optional HR, workout-scoped queries, sanitized failures, missing statistics and minute aggregation. No native compilation or physical UI/health result is claimed.
+- Expo Doctor also passed all 21 checks; no dependency updates were needed.
+
+### 2026-10-23 — Transfer guide for the official mobile app
+
+- Owner requested documentation for another agent to integrate the experiment into the official app and emphasized linking the recorded execution to the suggested workout. Added a Portuguese implementation handoff and copyable agent prompt, indexed in README.
+- Reviewed the official mobile architecture through GitHub and the current PoC source. The guide separates implemented APIs/observations from proposed production contracts, persistence, incremental sync and reconciliation. It distinguishes planned-session identity, Apple plan UUID, revisions and HealthKit execution UUID; retries preserve identity and repeated executions stay distinct.
+- Owner's positive feedback on the expanded screen is recorded as feedback, not metric-by-metric physical acceptance or proof of UUID linkage. Device validation remains required for the association and production acceptance matrix.
+- Documentation-only change: no runtime or dependency changes, no new build needed. Checked local Markdown link targets and diff whitespace; runtime tests were not rerun for prose-only edits.

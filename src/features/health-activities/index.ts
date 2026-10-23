@@ -12,6 +12,7 @@ export const healthActivityReading = createHealthActivityReading(() => {
       isHealthDataAvailable: health.isHealthDataAvailable,
       requestAuthorization: health.requestAuthorization,
       queryWorkoutSamples: health.queryWorkoutSamples,
+      queryQuantitySamples: health.queryQuantitySamples,
       runningActivityType: health.WorkoutActivityType.running,
     };
   }
